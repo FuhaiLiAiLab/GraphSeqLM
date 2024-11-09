@@ -10,3 +10,8 @@
 /data/*raw*/
 /data/embeddings/*
 /data/sequences/*
+/data/UCSC-process/processed-genotype-gene-expression.csv
+/data/UCSC-process/processed-sequence-dna.csv
+/data/UCSC-process/processed-sequence-rna.csv
+/data/UCSC-graph-data/x.npy
+/data/UCSC-graph-data/seq.npy
