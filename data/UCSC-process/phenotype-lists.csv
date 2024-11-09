@@ -1,0 +1,23 @@
+Phenotype_Name,Phenotype_Source
+Subtype_Immune_Model_Based,immunesub
+cancer type abbreviation,survival
+age_at_initial_pathologic_diagnosis,survival
+gender,survival
+race,survival
+ajcc_pathologic_tumor_stage,survival
+histological_type,survival
+initial_pathologic_dx_year,survival
+birth_days_to,survival
+vital_status,survival
+tumor_status,survival
+last_contact_days_to,survival
+OS,survival
+OS.time,survival
+DSS,survival
+DSS.time,survival
+PFI,survival
+PFI.time,survival
+sample_type,dense
+_primary_disease,dense
+Subtype_mRNA,cellsub
+Subtype_Selected,cellsub

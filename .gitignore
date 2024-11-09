@@ -1,0 +1,12 @@
+# pycache
+/__pycache__/*
+**.DS_Store
+**.png
+**.pdf
+**.h5
+**.pyc
+
+# ignore large files
+/data/*raw*/
+/data/embeddings/*
+/data/sequences/*

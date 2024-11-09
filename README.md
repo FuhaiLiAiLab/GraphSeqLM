@@ -1,2 +1,2 @@
-# SeqGraphLM
+# GraphSeqLM
 A Graphical Sequence Language Model
