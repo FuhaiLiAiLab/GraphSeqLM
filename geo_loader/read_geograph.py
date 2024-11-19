@@ -11,7 +11,7 @@ class ReadGeoGraph():
         pass
 
     def read_feature(self, num_graph, num_feature, num_node, xBatch):
-        # FORM [graph_feature_list]
+        # Form [graph_feature_list]
         xBatch = xBatch.reshape(num_graph, num_node, num_feature)
         graph_feature_list = []
         for i in range(num_graph):
@@ -28,7 +28,7 @@ class ReadGeoGraph():
         for i in range(num_graph):
             graph_feature = graph_feature_list[i]
             graph_label = graph_label_list[i]
-            # CONVERT [numpy] TO [torch]
+            # Convert [numpy] TO [torch]
             graph_feature = torch.from_numpy(graph_feature).float()
             graph_label = torch.from_numpy(np.array([graph_label])).float()
             geo_data = Data(x=graph_feature, edge_index=ppi_edge_index, internal_edge_index=internal_edge_index, all_edge_index=all_edge_index, label=graph_label)
@@ -36,7 +36,7 @@ class ReadGeoGraph():
         return geo_datalist
 
 
-def read_batch(index, upper_index, x_input, y_input, num_feature, num_node, all_edge_index, internal_edge_index, ppi_edge_index, graph_output_folder):
+def read_batch(index, upper_index, x_input, y_input, num_feature, num_node, all_edge_index, internal_edge_index, ppi_edge_index):
     # FORMING BATCH FILES
     print('--------------' + str(index) + ' to ' + str(upper_index) + '--------------')
     xBatch = x_input[index : upper_index, :]
@@ -47,7 +47,7 @@ def read_batch(index, upper_index, x_input, y_input, num_feature, num_node, all_
     print('READING BATCH GRAPHS TO LISTS ...')
     num_graph = upper_index - index
     # print('READING BATCH FEATURES ...')
-    graph_feature_list =  ReadGeoGraph().read_feature(num_graph, num_feature, num_node, xBatch)
+    graph_feature_list =  ReadGeoGraph().read_feature(num_graph, num_feature, num_node)
     # print('READING BATCH LABELS ...')
     graph_label_list = ReadGeoGraph().read_label(yBatch)
     # print('FORMING GEOMETRIC GRAPH DATALIST ...')
