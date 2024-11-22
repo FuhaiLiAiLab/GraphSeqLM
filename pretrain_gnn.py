@@ -110,8 +110,8 @@ def pretrain_foundation(args, device, num_feature=1):
         for index in range(0, dl_input_num, batch_size):
             upper_index = min(index + batch_size, dl_input_num)
             geo_datalist = read_batch(index, upper_index, xAll, yAll, num_feature, num_node, 
-                                      all_edge_index, internal_edge_index, ppi_edge_index, graph_output_folder)
-            dataset_loader, node_num, feature_dim = GeoGraphLoader.load_graph(geo_datalist, args)
+                                      all_edge_index, internal_edge_index, ppi_edge_index)
+            dataset_loader = GeoGraphLoader.load_graph(geo_datalist, args)
 
             for batch_idx, data in enumerate(dataset_loader):
                 train_data, val_data, test_data = T.RandomLinkSplit(num_test=0.1, num_val=0.0,
@@ -146,7 +146,7 @@ def arg_parse():
     parser.add_argument('--dataset', nargs='?', default='UCSC', help='Datasets. (default: UCSC)')
     parser.add_argument('--seed', type=int, default=2024, help='Random seed for model and dataset. (default: 2024)')
     parser.add_argument('--pretrain', type=int, default=1, help='Whether to pretrain the model. (default: False)')
-    parser.add_argument('--layer', nargs='?', default='gcn', help='GNN layer, (default: gcn)')
+    parser.add_argument('--layer', nargs='?', default='gat', help='GNN layer, (default: gat)')
     parser.add_argument('--encoder_activation', nargs='?', default='elu', help='Activation function for GNN encoder, (default: elu)')
 
     parser.add_argument('--input_dim', type=int, default=1, help='Input feature dimension. (default: 1)')

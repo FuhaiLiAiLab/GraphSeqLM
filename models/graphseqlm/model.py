@@ -208,7 +208,7 @@ class TransformerConv(MessagePassing):
                 f'{self.out_channels}, heads={self.heads})')
 
 
-class GraphSeqLM:
+class GraphSeqLM(nn.Module):
     def __init__(
         self,
         input_dim: int = 5,
@@ -219,9 +219,10 @@ class GraphSeqLM:
         num_classes: int = 2,
         dna_seq_model = None,
         rna_seq_model = None,
-        protein_seq_model = None
+        protein_seq_model = None,
+        device: str = "cpu"
     ):
-        super().__init__()
+        super(GraphSeqLM, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.embedding_dim = embedding_dim
@@ -231,7 +232,8 @@ class GraphSeqLM:
         self.dna_seq_model = dna_seq_model
         self.rna_seq_model = rna_seq_model
         self.protein_seq_model = protein_seq_model
-        
+        self.device = device
+
         self.conv_first, self.conv_block, self.conv_last = self.build_conv_layer(
                     input_dim, hidden_dim, embedding_dim)
         
@@ -272,18 +274,19 @@ class GraphSeqLM:
         # Convert seq from numpy 1D strings to list of strings
         seq = seq.tolist()
         # DNA sequence model
-        dna_seq = seq[:self.num_nodes, ]
-        embed_dna_seq = self.dna_seq_model(dna_seq)
+        dna_seq = seq[:int(self.num_nodes)]
+        embed_dna_seq = self.dna_seq_model.generate_embeddings(dna_seq)
         # RNA sequence model
-        rna_seq = seq[self.num_nodes:2*self.num_nodes, ]
-        embed_rna_seq = self.rna_seq_model(rna_seq)
+        rna_seq = seq[int(self.num_nodes):2*int(self.num_nodes)]
+        embed_rna_seq = self.rna_seq_model.generate_embeddings(rna_seq)
         # Protein sequence model
-        protein_seq = seq[2*self.num_nodes:, ]
-        embed_protein_seq = self.protein_seq_model(protein_seq)
+        protein_seq = seq[2*int(self.num_nodes):]
+        embed_protein_seq = self.protein_seq_model.generate_embeddings(protein_seq)
         # Concatenate the embeddings
-        embed_seq = embed_dna_seq + embed_rna_seq + embed_protein_seq
+        import pdb; pdb.set_trace()
+        embed_seq = torch.cat((embed_dna_seq, embed_rna_seq, embed_protein_seq), dim=0)
         # Convert the embeddings to torch tensor (shape: [num_nodes, 3])
-        embed_seq = torch.tensor(embed_seq).float()
+        embed_seq = torch.tensor(embed_seq).to(self.device).float()
         # Concatenate the x (shape: [batch_size, num_nodes, 1]) and embed_seq (shape: [num_nodes, 3])
         x_cat = torch.cat((x, embed_seq), dim=-1)
         # Concatenate the x_cat (shape: [batch_size, num_nodes, 4]) and embedding (shape: [batch_size, num_nodes, 1])
@@ -313,7 +316,7 @@ class GraphSeqLM:
     def loss(self, output, label):
         num_class = self.num_classes
         # Use weight vector to balance the loss
-        weight_vector = torch.zeros([num_class]).to(device='cuda')
+        weight_vector = torch.zeros([num_class]).to(device=self.device)
         label = label.long()
         for i in range(num_class):
             n_samplei = torch.sum(label == i)

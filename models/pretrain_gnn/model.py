@@ -243,7 +243,7 @@ class GNNEncoder(nn.Module):
         num_layers=2,
         dropout=0.5,
         bn=False,
-        layer="gcn",
+        layer="gat",
         activation="elu",
         use_node_feats=True,
         num_nodes=None,

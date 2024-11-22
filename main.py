@@ -57,21 +57,25 @@ def build_pretrain_model(args, num_feature, num_node, device):
     return pretrain_model
 
 def build_finetune_model(device):
-    dna_seq_model = DNASeqLM(model_path="dmis-lab/biobert-base-cased-v1.1", device=device)
-    rna_seq_model = RNASeqLM(model_path="dmis-lab/biobert-base-cased-v1.1", device=device)
-    protein_seq_model = ProteinSeqLM(model_path="dmis-lab/biobert-base-cased-v1.1", device=device)
+    dna_seq_model = DNASeqLM(model_path="zhihan1996/DNA_bert_3", device=device)
+    rna_seq_model = RNASeqLM(model_path="multimolecule/rnabert", device=device)
+    protein_seq_model = ProteinSeqLM(model_path="Rostlab/prot_bert", device=device)
     return dna_seq_model, rna_seq_model, protein_seq_model
 
 def build_graphclas_model(args, num_type_node, device):
     dna_seq_model, rna_seq_model, protein_seq_model = build_finetune_model(device)
+    dna_seq_model.load_model()
+    rna_seq_model.load_model()
+    protein_seq_model.load_model()
     model = GraphSeqLM(input_dim=args.train_input_dim, 
                        hidden_dim=args.train_hidden_dim, 
                        embedding_dim=args.train_embedding_dim, 
                        num_nodes=num_type_node, 
                        num_classes=2, 
-                       dna_seq_model=dna_seq_model, 
-                       rna_seq_model=rna_seq_model, 
-                       protein_seq_model=protein_seq_model).to(device)
+                       dna_seq_model=dna_seq_model,
+                       rna_seq_model=rna_seq_model,
+                       protein_seq_model=protein_seq_model,
+                       device=device).to(device)
     return model
 
 def train_graphclas_model(train_dataset_loader, seq, pretrain_model, model, device, learning_rate):
@@ -116,6 +120,7 @@ def test_graphclas_model(test_dataset_loader, pretrain_model, model, device, arg
         # Use pretrained model to get the embedding
         z = pretrain_model.internal_encoder(x, internal_edge_index)
         embedding = pretrain_model.encoder.get_embedding(z, ppi_edge_index, mode='last') # mode='cat'
+        import pdb; pdb.set_trace()
         output, ypred = model(x, embedding, edge_index)
         loss = model.loss(output, label)
         batch_loss += loss.item()
@@ -132,17 +137,17 @@ def train_model(args, pretrain_model, device):
     graph_output_folder = dataset + '-graph-data'
     # [num_feature, num_gene]
     num_feature = 1
-    final_annotation_gene_df = pd.read_csv(os.path.join(graph_output_folder, 'map-all-gene.csv'))
+    final_annotation_gene_df = pd.read_csv(os.path.join('data', graph_output_folder, 'map-all-gene.csv'))
     gene_name_list = list(final_annotation_gene_df['Gene_name'])
     num_node = len(gene_name_list) 
     num_type = 3
     num_type_node = num_node / num_type
-    form_data_path = './' + graph_output_folder + '/form_data'
+    form_data_path = './data/' + graph_output_folder
     # Read these feature label files
     print('--- LOADING TRAINING FILES ... ---')
     xTr = np.load(form_data_path + '/xTr' + str(fold_n) + '.npy')
     yTr = np.load(form_data_path + '/yTr' + str(fold_n) + '.npy')
-    seq = np.load(form_data_path + '/seq.npy')
+    seq = np.load(form_data_path + '/seq.npy', allow_pickle=True)
     all_edge_index = torch.from_numpy(np.load(form_data_path + '/edge_index.npy') ).long()
     internal_edge_index = torch.from_numpy(np.load(form_data_path + '/internal_edge_index.npy') ).long()
     ppi_edge_index = torch.from_numpy(np.load(form_data_path + '/ppi_edge_index.npy') ).long()
@@ -153,7 +158,7 @@ def train_model(args, pretrain_model, device):
     dl_input_num = xTr.shape[0]
     epoch_num = args.num_train_epoch
     learning_rate = args.train_lr
-    train_batch_size = args.train_batch_size
+    batch_size = args.batch_size
 
     # Record training results
     epoch_loss_list = []
@@ -164,12 +169,12 @@ def train_model(args, pretrain_model, device):
     max_test_acc_id = 0
     # Clean result previous epoch_i_pred files
     folder_name = 'epoch_' + str(epoch_num) + '_fold_' + str(fold_n)
-    path = './' + dataset + '-result/' + args.train_result_path + '/%s' % (folder_name)
+    path = './data/' + dataset + '-result/' + args.train_result_path + '/%s' % (folder_name)
     unit = 1
-    while os.path.exists('./' + dataset + '-result/' + args.train_result_path) == False:
-        os.mkdir('./' + dataset + '-result/' + args.train_result_path)
+    while os.path.exists('./data/' + dataset + '-result/' + args.train_result_path) == False:
+        os.mkdir('./data/' + dataset + '-result/' + args.train_result_path)
     while os.path.exists(path):
-        path = './' + dataset + '-result/' + args.train_result_path + '/%s_%d' % (folder_name, unit)
+        path = './data/' + dataset + '-result/' + args.train_result_path + '/%s_%d' % (folder_name, unit)
         unit += 1
     os.mkdir(path)
 
@@ -184,14 +189,16 @@ def train_model(args, pretrain_model, device):
         upper_index = 0
         batch_loss_list = []
         dl_input_num = xTr.shape[0]
-        for index in range(0, dl_input_num, train_batch_size):
-            if (index + train_batch_size) < dl_input_num:
-                upper_index = index + train_batch_size
+        
+        for index in range(0, dl_input_num, batch_size):
+            if (index + batch_size) < dl_input_num:
+                upper_index = index + batch_size
             else:
                 upper_index = dl_input_num
             geo_train_datalist = read_batch(index, upper_index, xTr, yTr, num_feature, num_node, all_edge_index, internal_edge_index, ppi_edge_index)
             train_dataset_loader = GeoGraphLoader.load_graph(geo_train_datalist, args)
             model, batch_loss, batch_acc, batch_ypred = train_graphclas_model(train_dataset_loader, seq, pretrain_model, model, device, learning_rate)
+            import pdb; pdb.set_trace()
             print('BATCH LOSS: ', batch_loss)
             print('BATCH ACCURACY: ', batch_acc)
             batch_loss_list.append(batch_loss)
@@ -272,7 +279,7 @@ def test_model(args, pretrain_model, model, device, graph_output_folder, i):
     ppi_edge_index = torch.from_numpy(np.load(form_data_path + '/ppi_edge_index.npy') ).long()
 
     dl_input_num = xTe.shape[0]
-    train_batch_size = args.train_batch_size
+    batch_size = args.batch_size
     # Clean result previous epoch_i_pred files
     # [num_feature, num_node]
     num_feature = 1
@@ -284,9 +291,9 @@ def test_model(args, pretrain_model, model, device, graph_output_folder, i):
     all_ypred = np.zeros((1, 1))
     upper_index = 0
     batch_loss_list = []
-    for index in range(0, dl_input_num, train_batch_size):
-        if (index + train_batch_size) < dl_input_num:
-            upper_index = index + train_batch_size
+    for index in range(0, dl_input_num, batch_size):
+        if (index + batch_size) < dl_input_num:
+            upper_index = index + batch_size
         else:
             upper_index = dl_input_num
         geo_datalist = read_batch(index, upper_index, xTe, yTe, num_feature, num_node, all_edge_index, internal_edge_index, ppi_edge_index, graph_output_folder)
@@ -343,16 +350,33 @@ def test_trained_model(args, pretrain_model, device):
 
 def arg_parse():
     parser = argparse.ArgumentParser()
+    # pre-training parameters
+    parser.add_argument('--input_dim', type=int, default=1, help='Input feature dimension. (default: 1)')
+    parser.add_argument('--encoder_channels', type=int, default=1, help='Channels of GNN encoder layers. (default: 1)')
+    parser.add_argument('--hidden_channels', type=int, default=1, help='Channels of hidden representation. (default: 1)')
+    parser.add_argument('--decoder_channels', type=int, default=1, help='Channels of decoder layers. (default: 1)')
+    parser.add_argument('--encoder_layers', type=int, default=2, help='Number of layers for encoder. (default: 2)')
+    parser.add_argument('--internal_encoder_layers', type=int, default=3, help='Number of layers for internal encoder. (default: 3)')
+    parser.add_argument('--decoder_layers', type=int, default=2, help='Number of layers for decoders. (default: 2)')
+    parser.add_argument('--encoder_dropout', type=float, default=0.8, help='Dropout probability of encoder. (default: 0.8)')
+    parser.add_argument('--decoder_dropout', type=float, default=0.2, help='Dropout probability of decoder. (default: 0.2)')
+    parser.add_argument('--edge_p', type=float, default=0.001, help='Mask ratio or sample ratio for EdgeMask')
+    parser.add_argument('--node_p', type=float, default=0.001, help='Mask ratio or sample ratio for NodeMask')
+    parser.add_argument('--bn', action='store_true', help='Whether to use batch normalization. (default: False)')
+    parser.add_argument('--layer', nargs='?', default='gat', help='GNN layer, (default: gat)')
+    parser.add_argument('--encoder_activation', nargs='?', default='elu', help='Activation function for GNN encoder, (default: elu)')
+
     # training parameters
     parser.add_argument('--fold_n', dest='fold_n', type=int, default=1, help='Fold number for training. (default: 1)')
     parser.add_argument('--train_dataset', dest='train_dataset', type=str, default='UCSC', help='Dataset for training. (default: UCSC)')
     parser.add_argument('--num_train_epoch', dest='num_train_epoch', type=int, default=50, help='Number of epochs to train.')
-    parser.add_argument('--train_batch_size', dest='train_batch_size', type=int, default=32, help='Batch size of training.')
+    parser.add_argument('--batch_size', dest='batch_size', type=int, default=32, help='Batch size of training.')
+    parser.add_argument('--num_workers', dest = 'num_workers', type = int, default=0, help = 'Number of workers to load data.')
     parser.add_argument('--train_lr', dest='train_lr', type=float, default=0.005, help='Learning rate for training. (default: 0.005)')
-    parser.add_argument('--train_input_dim', dest='train_input_dim', type=int, default=8, help='Input dimension of training. (default: 64)')
-    parser.add_argument('--train_hidden_dim', dest='train_hidden_dim', type=int, default=30, help='Hidden dimension of training. (default: 64)')
-    parser.add_argument('--train_embedding_dim', dest='train_embedding_dim', type=int, default=30, help='Embedding dimension of training. (default: 64)')
-    parser.add_argument('--train_result_path', nargs='?', dest='train_result_path', default='pretrain+gformer', help='save path for model result. (default: pretrain+gformer)')
+    parser.add_argument('--train_input_dim', dest='train_input_dim', type=int, default=5, help='Input dimension of training. (default: 5)')
+    parser.add_argument('--train_hidden_dim', dest='train_hidden_dim', type=int, default=5, help='Hidden dimension of training. (default: 5)')
+    parser.add_argument('--train_embedding_dim', dest='train_embedding_dim', type=int, default=5, help='Embedding dimension of training. (default: 5)')
+    parser.add_argument('--train_result_path', nargs='?', dest='train_result_path', default='graphseqlm-bert', help='save path for model result. (default: graphseqlm-bert)')
     parser.add_argument('--pretrain_input_dim', dest='pretrain_input_dim', type=int, default=64, help='Output dimension of training. (default: 64)')
     parser.add_argument('--pretrain_output_dim', dest='pretrain_output_dim', type=int, default=8, help='Output dimension of pretraining. (default: 64)')
 
@@ -372,14 +396,15 @@ if __name__ == "__main__":
     print('MAIN DEVICE: ', device)
 
     # Load pre-train model
-    pretrain_model = build_pretrain_model(args, device, num_feature=1)
+    # Dataset Selection
+    dataset = args.train_dataset
+    graph_output_folder = dataset + '-graph-data'
+    final_annotation_gene_df = pd.read_csv(os.path.join('data', graph_output_folder, 'map-all-gene.csv'))
+    gene_name_list = list(final_annotation_gene_df['Gene_name'])
+    num_node = len(gene_name_list)
+    num_feature = 1
+    pretrain_model = build_pretrain_model(args, num_feature, num_node, device)
 
-    # Train or test model
-    if args.load == 0:
-        train_model(args, pretrain_model, device)
-    else:
-        test_trained_model(args, pretrain_model, device)
-
-
-
+    # Train
+    train_model(args, pretrain_model, device)
 

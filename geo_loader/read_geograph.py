@@ -47,7 +47,7 @@ def read_batch(index, upper_index, x_input, y_input, num_feature, num_node, all_
     print('READING BATCH GRAPHS TO LISTS ...')
     num_graph = upper_index - index
     # print('READING BATCH FEATURES ...')
-    graph_feature_list =  ReadGeoGraph().read_feature(num_graph, num_feature, num_node)
+    graph_feature_list =  ReadGeoGraph().read_feature(num_graph, num_feature, num_node, xBatch)
     # print('READING BATCH LABELS ...')
     graph_label_list = ReadGeoGraph().read_label(yBatch)
     # print('FORMING GEOMETRIC GRAPH DATALIST ...')
