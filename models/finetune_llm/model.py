@@ -6,11 +6,13 @@ import pandas as pd
 import torch.nn as nn
 from torch_geometric.nn import GATConv
 from torch_geometric.data import Data
-from transformers import AutoTokenizer, AutoModel
 from tqdm import tqdm
 from sklearn.preprocessing import LabelEncoder
 from typing import List, Tuple, Dict
 
+from transformers import AutoTokenizer, AutoModel
+from multimolecule import RnaTokenizer, RnaBertModel
+from transformers import BertModel, BertTokenizer
 
 class DNASeqLM:
     def __init__(self, model_path: str = "zhihan1996/DNA_bert_3", device: str = "cpu", kmer: int = 3):
@@ -61,8 +63,9 @@ class DNASeqLM:
             kmers = self._generate_kmers(sequence[0])
             # Tokenize and prepare input tensors
             inputs = self.tokenizer(kmers, return_tensors="pt", padding=True, truncation=True, max_length=512).to(self.device)
-            # Forward pass without torch.no_grad(), so gradients can be computed
-            outputs = self.model(**inputs)
+            # Forward pass with torch.no_grad()
+            with torch.no_grad():
+                outputs = self.model(**inputs)
             # Compute the sequence embedding (mean pooling along token dimension)
             sequence_embedding = torch.mean(outputs.last_hidden_state, dim=1).squeeze()
             # Append to the list of embeddings (keep them as tensors)
@@ -90,8 +93,8 @@ class RNASeqLM:
         """
         Load the RNA-BERT model and tokenizer from the specified model path.
         """
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
-        self.model = AutoModel.from_pretrained(self.model_path).to(self.device)
+        self.tokenizer = RnaTokenizer.from_pretrained(self.model_path)
+        self.model = RnaBertModel.from_pretrained(self.model_path).to(self.device)
         return self
 
     def _generate_kmers(self, sequence: str) -> str:
@@ -103,6 +106,9 @@ class RNASeqLM:
         Returns:
             str: Space-separated k-mer tokens for RNA-BERT tokenization.
         """
+        if len(sequence) < self.kmer:
+            print(f"Warning: Sequence length ({len(sequence)}) is shorter than k-mer size ({self.kmer}). Skipping this sequence.")
+            return None  # Return None for short sequences
         return " ".join([sequence[i:i + self.kmer] for i in range(len(sequence) - self.kmer + 1)])
 
     def generate_embeddings(self, sequences: List[str]) -> torch.Tensor:
@@ -117,12 +123,22 @@ class RNASeqLM:
         """
         embeddings = []
         for sequence in tqdm(sequences, desc="Embedding RNA sequences", unit="sequence"):
-            # Generate k-mers for the input sequence
+             # Generate k-mers for the input sequence
             kmers = self._generate_kmers(sequence[0])
+            if kmers is None:  # Skip short sequences
+                embeddings.append(torch.zeros(self.model.config.hidden_size).to(self.device))
+                continue
             # Tokenize and prepare input tensors
-            inputs = self.tokenizer(kmers, return_tensors="pt", padding=True, truncation=True, max_length=512).to(self.device)
-            # Forward pass without torch.no_grad(), so gradients can be computed
-            outputs = self.model(**inputs)
+            inputs = self.tokenizer(
+                kmers,  # Pass kmers directly
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=440  # Ensure input length <= model's max_length
+            ).to(self.device)
+            # Forward pass with torch.no_grad()
+            with torch.no_grad():
+                outputs = self.model(**inputs)
             # Compute the sequence embedding (mean pooling along token dimension)
             sequence_embedding = torch.mean(outputs.last_hidden_state, dim=1).squeeze()
             # Append to the list of embeddings (keep them as tensors)
@@ -148,8 +164,8 @@ class ProteinSeqLM:
         """
         Load the Protein-BERT model and tokenizer from the specified model path.
         """
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, do_lower_case=False)
-        self.model = AutoModel.from_pretrained(self.model_path).to(self.device)
+        self.tokenizer = BertTokenizer.from_pretrained(self.model_path, do_lower_case=False)
+        self.model = BertModel.from_pretrained(self.model_path).to(self.device)
         return self
 
     def _prepare_sequence(self, sequence: str) -> str:
@@ -178,8 +194,9 @@ class ProteinSeqLM:
             prepared_sequence = self._prepare_sequence(sequence[0])
             # Tokenize and prepare input tensors
             inputs = self.tokenizer(prepared_sequence, return_tensors="pt", padding=True, truncation=True, max_length=512).to(self.device)
-            # Forward pass without torch.no_grad(), so gradients can be computed
-            outputs = self.model(**inputs)
+            # Forward pass with torch.no_grad()
+            with torch.no_grad():
+                outputs = self.model(**inputs)
             # Compute the sequence embedding (mean pooling along token dimension)
             sequence_embedding = torch.mean(outputs.last_hidden_state, dim=1).squeeze()
             # Append to the list of embeddings (keep them as tensors)

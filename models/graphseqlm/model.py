@@ -211,15 +211,13 @@ class TransformerConv(MessagePassing):
 class GraphSeqLM(nn.Module):
     def __init__(
         self,
-        input_dim: int = 5,
-        hidden_dim: int = 5,
-        embedding_dim: int = 5,
+        input_dim: int = 3,
+        hidden_dim: int = 3,
+        embedding_dim: int = 3,
+        lm_dim: int = 3,
         num_nodes: int = 2111,
         num_heads: int = 1,
         num_classes: int = 2,
-        dna_seq_model = None,
-        rna_seq_model = None,
-        protein_seq_model = None,
         device: str = "cpu"
     ):
         super(GraphSeqLM, self).__init__()
@@ -229,9 +227,6 @@ class GraphSeqLM(nn.Module):
         self.num_nodes = num_nodes
         self.num_heads = num_heads
         self.num_classes = num_classes
-        self.dna_seq_model = dna_seq_model
-        self.rna_seq_model = rna_seq_model
-        self.protein_seq_model = protein_seq_model
         self.device = device
 
         self.conv_first, self.conv_block, self.conv_last = self.build_conv_layer(
@@ -247,21 +242,30 @@ class GraphSeqLM(nn.Module):
         # Simple aggregations
         self.mean_aggr = aggr.MeanAggregation()
         self.max_aggr = aggr.MaxAggregation()
+
         # Learnable aggregations
         self.softmax_aggr = aggr.SoftmaxAggregation(learn=True)
         self.powermean_aggr = aggr.PowerMeanAggregation(learn=True)
 
+        # Sequence models linear transformations
+        self.dna_seq_transform = nn.Linear(768, lm_dim)
+        self.rna_seq_transform = nn.Linear(120, lm_dim)
+        self.protein_seq_transform = nn.Linear(1024, lm_dim)
+        # Pretrain embedding linear transformation  
         self.pretrain_transform = nn.Linear(1, 1)
+        # Modality merging linear transformation
+        self.modality_transform = nn.Linear(lm_dim + 2, input_dim)
         self.graph_prediction = nn.Linear(embedding_dim * num_heads, num_classes)
 
     def reset_parameters(self):
-        self.dna_seq_model.reset_parameters()
-        self.rna_seq_model.reset_parameters()
-        self.protein_seq_model.reset_parameters()
+        self.dna_seq_transform.reset_parameters()
+        self.rna_seq_transform.reset_parameters()
+        self.protein_seq_transform.reset_parameters()
+        self.pretrain_transform.reset_parameters()
+        self.modality_transform.reset_parameters()
         self.conv_first.reset_parameters()
         self.conv_block.reset_parameters()
         self.conv_last.reset_parameters()
-        self.pretrain_transform.reset_parameters()
         self.graph_prediction.reset_parameters()
 
     def build_conv_layer(self, input_dim, hidden_dim, embedding_dim):
@@ -270,46 +274,50 @@ class GraphSeqLM(nn.Module):
         conv_last = TransformerConv(in_channels=hidden_dim*self.num_heads, out_channels=embedding_dim, heads=self.num_heads)
         return conv_first, conv_block, conv_last
 
-    def forward(self, x, embedding, all_edge_index, seq):
-        # Convert seq from numpy 1D strings to list of strings
-        seq = seq.tolist()
-        # DNA sequence model
-        dna_seq = seq[:int(self.num_nodes)]
-        embed_dna_seq = self.dna_seq_model.generate_embeddings(dna_seq)
-        # RNA sequence model
-        rna_seq = seq[int(self.num_nodes):2*int(self.num_nodes)]
-        embed_rna_seq = self.rna_seq_model.generate_embeddings(rna_seq)
-        # Protein sequence model
-        protein_seq = seq[2*int(self.num_nodes):]
-        embed_protein_seq = self.protein_seq_model.generate_embeddings(protein_seq)
+    def forward(self, x, embedding, all_edge_index, dna_embedding, rna_embedding, protein_embedding):
+        # Initial parameters
+        num_nodes = int(self.num_nodes)
+        batch_size = int(x.size(0) / num_nodes)
+        # DNA sequence embedding
+        embed_dna_seq = self.dna_seq_transform(dna_embedding)
+        # RNA sequence embedding
+        embed_rna_seq = self.rna_seq_transform(rna_embedding)
+        # Protein sequence embedding
+        embed_protein_seq = self.protein_seq_transform(protein_embedding)
         # Concatenate the embeddings
-        import pdb; pdb.set_trace()
         embed_seq = torch.cat((embed_dna_seq, embed_rna_seq, embed_protein_seq), dim=0)
-        # Convert the embeddings to torch tensor (shape: [num_nodes, 3])
-        embed_seq = torch.tensor(embed_seq).to(self.device).float()
-        # Concatenate the x (shape: [batch_size, num_nodes, 1]) and embed_seq (shape: [num_nodes, 3])
-        x_cat = torch.cat((x, embed_seq), dim=-1)
-        # Concatenate the x_cat (shape: [batch_size, num_nodes, 4]) and embedding (shape: [batch_size, num_nodes, 1])
+        # Expand the embed_seq to [batch_size, num_nodes, 3]
+        expand_embed_seq = embed_seq.expand(batch_size, -1, -1)
+        # Reshape the expand_embed_seq to [batch_size * num_nodes, 1]
+        reshaped_embed_seq = expand_embed_seq.reshape(-1, 1)
+        # Concatenate the x (shape: [batch_size * num_nodes, 1]) and embed_seq (shape: [num_nodes, 3])
+        x_cat = torch.cat((x, reshaped_embed_seq), dim=-1)
+        # Concatenate the x_cat (shape: [batch_size, num_nodes, 1]) and embedding (shape: [batch_size, num_nodes, 1])
         pretrain_embedding = self.pretrain_transform(embedding)
         x_cat_embed = torch.cat((x_cat, pretrain_embedding), dim=-1)
-        # Graph encoder
-        x = self.conv_first(x, all_edge_index)
-        x = self.x_norm_first(x)
-        x = self.act2(x)
 
-        x = self.conv_block(x, all_edge_index)
-        x = self.x_norm_block(x)
-        x = self.act2(x)
+        # [x_cat_embed] linear transformation
+        x_cat_embed = self.modality_transform(x_cat_embed)
 
-        x = self.conv_last(x, all_edge_index)
-        x = self.x_norm_last(x)
-        x = self.act2(x)
+        # Graph encoder - layer1 
+        x_embed = self.conv_first(x_cat_embed, all_edge_index)
+        x_embed = self.x_norm_first(x_embed)
+        x_embed = self.act2(x_embed)
+        # Graph encoder - layer2
+        x_embed = self.conv_block(x_embed, all_edge_index)
+        x_embed = self.x_norm_block(x_embed)
+        x_embed = self.act2(x_embed)
+        # Graph encoder - layer3
+        x_embed = self.conv_last(x_embed, all_edge_index)
+        x_embed = self.x_norm_last(x_embed)
+        x_embed = self.act2(x_embed)
         
         # Embedding decoder to [ypred]
-        x = x.view(-1, self.num_node, self.embedding_dim * self.num_head)
-        x = self.powermean_aggr(x).view(-1, self.embedding_dim * self.num_head)
-        output = self.graph_prediction(x)
+        x_embed = x_embed.view(-1, num_nodes, self.embedding_dim * self.num_heads)
+        x_embed = self.powermean_aggr(x_embed).view(-1, self.embedding_dim * self.num_heads)
+        output = self.graph_prediction(x_embed)
         _, ypred = torch.max(output, dim=1)
+
         return output, ypred
 
 
@@ -323,10 +331,8 @@ class GraphSeqLM(nn.Module):
             if n_samplei == 0:
                 weight_vector[i] = 0
             else:
-                weight_vector[i] = len(label) / (n_samplei)
+                weight_vector[i] = len(label) / (n_samplei * 1.5)
         # Calculate the loss
         output = torch.log_softmax(output, dim=-1)
         loss = F.nll_loss(output, label, weight_vector)
         return loss
-    
-        

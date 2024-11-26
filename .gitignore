@@ -16,3 +16,6 @@
 /data/UCSC-graph-data/x.npy
 /data/UCSC-graph-data/*.npy
 /data/UCSC-graph-data/seq.npy
+
+# ignore the results
+/data/UCSC-result/*
