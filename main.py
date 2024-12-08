@@ -31,6 +31,20 @@ def tab_printer(args):
     t.add_rows([["Parameter", "Value"]] + [[k, str(args[k])] for k in keys if not k.startswith('__')])
     return t.draw()
 
+def write_best_model_info(fold_n, path, max_test_acc_id, epoch_loss_list, epoch_acc_list, test_loss_list, test_acc_list):
+    best_model_info = (
+        f'\n-------------Fold: {fold_n} -------------\n'
+        f'\n-------------BEST TEST ACCURACY MODEL ID INFO: {max_test_acc_id} -------------\n'
+        '--- TRAIN ---\n'
+        f'BEST MODEL TRAIN LOSS: {epoch_loss_list[max_test_acc_id - 1]}\n'
+        f'BEST MODEL TRAIN ACCURACY: {epoch_acc_list[max_test_acc_id - 1]}\n'
+        '--- TEST ---\n'
+        f'BEST MODEL TEST LOSS: {test_loss_list[max_test_acc_id - 1]}\n'
+        f'BEST MODEL TEST ACCURACY: {test_acc_list[max_test_acc_id - 1]}\n'
+    )
+    with open(os.path.join(path, 'best_model_info.txt'), 'w') as file:
+        file.write(best_model_info)
+
 def build_pretrain_model(args, num_feature, num_node, device):
     encoder = GNNEncoder(num_feature, args.encoder_channels, args.hidden_channels,
                         num_layers=args.encoder_layers, dropout=args.encoder_dropout,
@@ -151,7 +165,7 @@ def test_graphclas_model(test_dataset_loader, dna_embedding, rna_embedding, prot
     return model, batch_loss, batch_acc, all_ypred
 
 
-def train_model(args, device):
+def train_model(nth, args, device):
     # Training dataset basic parameters
     dataset = args.train_dataset
     fold_n = args.fold_n
@@ -202,15 +216,16 @@ def train_model(args, device):
     test_acc_list = []
     max_test_acc = 0
     max_test_acc_id = 0
+
     # Clean result previous epoch_i_pred files
     folder_name = 'epoch_' + str(epoch_num) + '_fold_' + str(fold_n)
-    path = './data/' + dataset + '-result/' + args.train_result_path + '/%s' % (folder_name)
-    unit = 1
+    unit = nth
+    path = './data/' + dataset + '-result/' + args.train_result_path + '/%s-%d' % (folder_name, unit)
     while os.path.exists('./data/' + dataset + '-result/' + args.train_result_path) == False:
         os.mkdir('./data/' + dataset + '-result/' + args.train_result_path)
     while os.path.exists(path):
-        path = './data/' + dataset + '-result/' + args.train_result_path + '/%s_%d' % (folder_name, unit)
         unit += 1
+        path = './data/' + dataset + '-result/' + args.train_result_path + '/%s-%d' % (folder_name, unit)
     os.mkdir(path)
 
     for i in range(1, epoch_num + 1):
@@ -240,7 +255,7 @@ def train_model(args, device):
             # PRESERVE PREDICTION OF BATCH TRAINING DATA
             batch_ypred = (Variable(batch_ypred).data).cpu().numpy().reshape(-1, 1)
             epoch_ypred = np.vstack((epoch_ypred, batch_ypred))
-        epoch_loss = np.mean(batch_loss_list)
+        epoch_loss = float(np.mean(batch_loss_list))
         print('TRAIN EPOCH ' + str(i) + ' LOSS: ', epoch_loss)
         epoch_loss_list.append(epoch_loss)
         epoch_ypred = np.delete(epoch_ypred, 0, axis = 0)
@@ -296,7 +311,7 @@ def train_model(args, device):
         print('--- TEST ---')
         print('BEST MODEL TEST LOSS: ', test_loss_list[max_test_acc_id - 1])
         print('BEST MODEL TEST ACCURACY: ', test_acc_list[max_test_acc_id - 1])
-
+        write_best_model_info(fold_n, path, max_test_acc_id, epoch_loss_list, epoch_acc_list, test_loss_list, test_acc_list)
 
 def test_model(args, pretrain_model, model, device, i):
     print('-------------------------- TEST START --------------------------')
@@ -346,7 +361,7 @@ def test_model(args, pretrain_model, model, device, i):
         # PRESERVE PREDICTION OF BATCH TEST DATA
         batch_ypred = batch_ypred.reshape(-1, 1)
         all_ypred = np.vstack((all_ypred, batch_ypred))
-    test_loss = np.mean(batch_loss_list)
+    test_loss = float(np.mean(batch_loss_list))
     print('EPOCH ' + str(i) + ' TEST LOSS: ', test_loss)
     # Preserve accuracy for every epoch
     all_ypred = np.delete(all_ypred, 0, axis=0)
@@ -418,11 +433,11 @@ def arg_parse():
     # training parameters
     parser.add_argument('--fold_n', dest='fold_n', type=int, default=1, help='Fold number for training. (default: 1)')
     parser.add_argument('--train_dataset', dest='train_dataset', type=str, default='UCSC', help='Dataset for training. (default: UCSC)')
-    parser.add_argument('--num_train_epoch', dest='num_train_epoch', type=int, default=200, help='Number of epochs to train.')
+    parser.add_argument('--num_train_epoch', dest='num_train_epoch', type=int, default=50, help='Number of epochs to train.')
     parser.add_argument('--batch_size', dest='batch_size', type=int, default=32, help='Batch size of training.')
     parser.add_argument('--num_workers', dest = 'num_workers', type = int, default=0, help = 'Number of workers to load data.')
     parser.add_argument('--train_lr', dest='train_lr', type=float, default=0.005, help='Learning rate for training. (default: 0.005)')
-    parser.add_argument('--weight_decay', dest='weight_decay', type=float, default=1e-5, help='Weight decay for training. (default: 1e-5)')
+    parser.add_argument('--weight_decay', dest='weight_decay', type=float, default=1e-6, help='Weight decay for training. (default: 1e-6)')
     parser.add_argument('--eps', dest='eps', type=float, default=1e-7, help='Epsilon for Adam. (default: 1e-7)')
 
     parser.add_argument('--train_input_dim', dest='train_input_dim', type=int, default=3, help='Input dimension of training. (default: 3)')
@@ -440,6 +455,11 @@ def arg_parse():
     return parser.parse_args()
 
 
+# Helper function to update args
+def update_args(args, fold_n):
+    args.fold_n = fold_n
+    return args
+
 if __name__ == "__main__":
     # Set arguments and print
     args = arg_parse()
@@ -450,9 +470,10 @@ if __name__ == "__main__":
     torch.cuda.set_device(device)
     print('MAIN DEVICE: ', device)
 
-    if args.load == 0:
-        # Train
-        train_model(args, device)
-    else:
-        # Test
+    # Train
+    k = 5
+    fold_num_train = 10
+    if args.load == 0: 
+        [train_model(nth, update_args(args, fold_n), device) for nth in range(1, fold_num_train + 1) for fold_n in range(2, k + 1)]
+    else: 
         test_trained_model(args, device)

@@ -11,7 +11,6 @@ from torch_geometric.nn import (
 )
 
 from torch_geometric.utils import add_self_loops, negative_sampling, degree
-from torch_sparse import SparseTensor
 from torch.utils.data import DataLoader
 from sklearn.metrics import roc_auc_score, average_precision_score
 
@@ -25,7 +24,7 @@ from torch import Tensor
 from torch_geometric.nn.dense.linear import Linear
 from torch_geometric.typing import Adj, OptTensor, PairTensor, SparseTensor
 from torch_geometric.utils import softmax
-
+from torch_sparse import SparseTensor
 
 # custom modules
 from models.pretrain_gnn.loss import info_nce_loss, ce_loss, log_rank_loss, hinge_auc_loss, auc_loss

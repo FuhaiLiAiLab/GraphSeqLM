@@ -1,10 +1,6 @@
-import os
 import torch
 import torch.nn.functional as F
 
-import torch
-import torch.nn.functional as F
-import torch.nn as nn
 from torch_geometric.nn import (
     Linear,
     GCNConv,
@@ -14,16 +10,7 @@ from torch_geometric.nn import (
     GATv2Conv
 )
 
-from torch_geometric.utils import add_self_loops, negative_sampling, degree
-from torch_sparse import SparseTensor
-from torch.utils.data import DataLoader
-from sklearn.metrics import roc_auc_score, average_precision_score
-
-from torch_geometric.nn import MessagePassing
-from torch_geometric.utils import add_self_loops, degree, softmax
-
 import math
-from tqdm.auto import tqdm
 from typing import Optional, Tuple, Union
 from torch import Tensor
 from torch_geometric.nn.dense.linear import Linear
@@ -32,26 +19,8 @@ from torch_geometric.utils import softmax
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from torch_scatter import scatter_add
 from torch_geometric.nn import MessagePassing
-from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, GlobalAttention, Set2Set
-from torch_geometric.nn.inits import glorot, zeros
-from torch_geometric.utils import add_self_loops, degree, softmax
-
-
-import math
-from typing import Optional, Tuple, Union
-
-import torch
-import torch.nn.functional as F
-from torch import Tensor
-
-from torch_geometric.nn.conv import MessagePassing
-from torch_geometric.nn.dense.linear import Linear
-from torch_geometric.typing import Adj, OptTensor, PairTensor, SparseTensor
-from torch_geometric.utils import softmax
 
 from torch_geometric.nn import aggr
 
