@@ -5,18 +5,12 @@ import numpy as np
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch_geometric.transforms as T
-from tqdm.auto import tqdm
-
 from torch.autograd import Variable
-from torch.utils.data import DataLoader
 
 # custom modules
 from texttable import Texttable
-from models.pretrain_gnn.model import MaskGAE, DegreeDecoder, EdgeDecoder, GNNEncoder
-from models.finetune_llm.model import DNASeqLM, RNASeqLM, ProteinSeqLM
-from models.graphseqlm.model import GraphSeqLM
+from models.pretrain_gnn.pretrain_gnn_model import MaskGAE, DegreeDecoder, EdgeDecoder, GNNEncoder
+from models.gnn.geo_gcn_decoder import GCNDecoder
 
 # custom dataloader
 from geo_loader.read_geograph import read_batch
@@ -70,38 +64,10 @@ def build_pretrain_model(args, num_feature, num_node, device):
                     node_p=args.node_p).to(device)
     return pretrain_model
 
-def build_finetune_model(device):
-    dna_seq_model = DNASeqLM(model_path="zhihan1996/DNA_bert_3", device=device)
-    rna_seq_model = RNASeqLM(model_path="multimolecule/rnabert", device=device)
-    protein_seq_model = ProteinSeqLM(model_path="Rostlab/prot_bert", device=device)
-    return dna_seq_model, rna_seq_model, protein_seq_model
-
 def build_graphclas_model(args, num_node, device):
-    model = GraphSeqLM(input_dim=args.train_input_dim, 
-                       hidden_dim=args.train_hidden_dim, 
-                       embedding_dim=args.train_embedding_dim, 
-                       lm_dim=args.lm_dim,
-                       num_nodes=num_node, 
-                       num_heads=args.num_heads,
-                       num_classes=args.num_classes,
-                       device=device).to(device)
+    model = GCNDecoder(input_dim=args.train_input_dim, hidden_dim=args.train_hidden_dim,
+                    embedding_dim=args.train_embedding_dim, node_num=num_node, device=device, num_class=args.num_classes).to(device)
     return model
-
-def language_model_embedding(num_type_node, dna_seq_model, rna_seq_model, protein_seq_model, seq):
-    seq = seq.tolist()
-    # DNA sequence embedding
-    dna_seq_model.load_model()
-    dna_seq = seq[:int(num_type_node)]
-    dna_embedding = dna_seq_model.generate_embeddings(dna_seq)
-    # RNA sequence embedding
-    rna_seq_model.load_model()
-    rna_seq = seq[int(num_type_node):2*int(num_type_node)]
-    rna_embedding = rna_seq_model.generate_embeddings(rna_seq)
-    # Protein sequence embedding
-    protein_seq_model.load_model()
-    protein_seq = seq[2*int(num_type_node):]
-    protein_embedding = protein_seq_model.generate_embeddings(protein_seq)
-    return dna_embedding, rna_embedding, protein_embedding
 
 def train_graphclas_model(train_dataset_loader, dna_embedding, rna_embedding, protein_embedding, pretrain_model, model, device, args):
     optimizer = torch.optim.Adam(filter(lambda p : p.requires_grad, model.parameters()), lr=args.train_lr, eps=args.eps, weight_decay=args.weight_decay)
@@ -117,13 +83,9 @@ def train_graphclas_model(train_dataset_loader, dna_embedding, rna_embedding, pr
         # Use pretrained model to get the embedding
         z = pretrain_model.internal_encoder(x, internal_edge_index)
         embedding = pretrain_model.encoder.get_embedding(z, ppi_edge_index, mode='last') # mode='cat'
-        # Get the language model embedding
-        dna_embedding = Variable(torch.Tensor(dna_embedding), requires_grad=False).to(device)
-        rna_embedding = Variable(torch.Tensor(rna_embedding), requires_grad=False).to(device)
-        protein_embedding = Variable(torch.Tensor(protein_embedding), requires_grad=False).to(device)
         # Use graphseqlm model to get the output
         x = x + torch.normal(mean=0, std=0.01, size=x.size()).to(device) # Add noise to x
-        output, ypred = model(x, embedding, edge_index, dna_embedding, rna_embedding, protein_embedding)
+        output, ypred = model(x, embedding, edge_index)
         loss = model.loss(output, label)
         loss.backward()
         batch_loss += loss.item()

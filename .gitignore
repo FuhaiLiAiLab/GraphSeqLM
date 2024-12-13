@@ -19,3 +19,6 @@
 
 # ignore the results
 /data/UCSC-result/*
+
+# ignore the ckpt files in finetuned llm model
+models/finetune_llm/checkpoints/*.pth

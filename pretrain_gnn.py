@@ -6,7 +6,7 @@ import numpy as np
 import torch_geometric.transforms as T
 # custom modules
 from texttable import Texttable
-from models.pretrain_gnn.model import MaskGAE, DegreeDecoder, EdgeDecoder, GNNEncoder
+from models.pretrain_gnn.pretrain_gnn_model import MaskGAE, DegreeDecoder, EdgeDecoder, GNNEncoder
 # custom dataloader
 from geo_loader.read_geograph import read_batch
 from geo_loader.geograph_sampler import GeoGraphLoader
