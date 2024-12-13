@@ -204,6 +204,11 @@ def train_model(nth, args, device):
         np.save(form_data_path + '/rna_gpt_embedding.npy', rna_embedding.cpu().numpy())
         np.save(form_data_path + '/protein_gpt_embedding.npy', protein_embedding.cpu().numpy())
 
+    # Average the sequence emebedding
+    dna_embedding = np.mean(dna_embedding, axis=1).reshape(-1, 1)
+    rna_embedding = np.mean(rna_embedding, axis=1).reshape(-1, 1)
+    protein_embedding = np.mean(protein_embedding, axis=1).reshape(-1, 1)
+
     # Training model stage starts
     model = build_graphclas_model(args, num_node, device)
     dl_input_num = xTr.shape[0]
@@ -333,6 +338,11 @@ def test_model(args, pretrain_model, model, device, i):
     rna_embedding = np.load(form_data_path + '/rna_gpt_embedding.npy')
     protein_embedding = np.load(form_data_path + '/protein_gpt_embedding.npy')
 
+    # Average the sequence emebedding
+    dna_embedding = np.mean(dna_embedding, axis=1).reshape(-1, 1)
+    rna_embedding = np.mean(rna_embedding, axis=1).reshape(-1, 1)
+    protein_embedding = np.mean(protein_embedding, axis=1).reshape(-1, 1)
+
     dl_input_num = xTe.shape[0]
     batch_size = args.batch_size
     # Clean result previous epoch_i_pred files
@@ -437,7 +447,7 @@ def arg_parse():
     parser.add_argument('--num_train_epoch', dest='num_train_epoch', type=int, default=50, help='Number of epochs to train.')
     parser.add_argument('--batch_size', dest='batch_size', type=int, default=32, help='Batch size of training.')
     parser.add_argument('--num_workers', dest = 'num_workers', type = int, default=0, help = 'Number of workers to load data.')
-    parser.add_argument('--train_lr', dest='train_lr', type=float, default=0.005, help='Learning rate for training. (default: 0.005)')
+    parser.add_argument('--train_lr', dest='train_lr', type=float, default=0.002, help='Learning rate for training. (default: 0.002)')
     parser.add_argument('--weight_decay', dest='weight_decay', type=float, default=1e-5, help='Weight decay for training. (default: 1e-5)')
     parser.add_argument('--eps', dest='eps', type=float, default=1e-7, help='Epsilon for Adam. (default: 1e-7)')
 

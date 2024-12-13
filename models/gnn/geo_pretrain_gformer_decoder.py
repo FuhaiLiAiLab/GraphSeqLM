@@ -295,8 +295,6 @@ class GraphFormerDecoder(nn.Module):
         return conv_first, conv_block, conv_last
 
     def forward(self, x, embedding, edge_index):
-        # import pdb; pdb.set_trace()
-
         # Concat pretrained embedding with input features
         pretrain_embedding = self.pretrain_transform(embedding)
         x = torch.cat([x, pretrain_embedding], dim=-1)

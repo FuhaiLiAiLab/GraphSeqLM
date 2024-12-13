@@ -217,9 +217,9 @@ class GraphSeqLM(nn.Module):
         self.powermean_aggr = aggr.PowerMeanAggregation(learn=True)
 
         # Sequence models linear transformations
-        self.dna_seq_transform = nn.Linear(15659, lm_dim)
-        self.rna_seq_transform = nn.Linear(15659, lm_dim)
-        self.protein_seq_transform = nn.Linear(50257, lm_dim)
+        self.dna_seq_transform = nn.Linear(1, lm_dim) # 15659
+        self.rna_seq_transform = nn.Linear(1, lm_dim) # 15659
+        self.protein_seq_transform = nn.Linear(1, lm_dim) # 50257
         # Pretrain embedding linear transformation  
         self.pretrain_transform = nn.Linear(1, 1)
         # Modality merging linear transformation
