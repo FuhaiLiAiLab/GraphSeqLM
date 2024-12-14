@@ -19,8 +19,10 @@ from torch_geometric.utils import softmax
 
 import torch
 import torch.nn as nn
-from torch_geometric.nn import aggr
+
 from torch_geometric.nn import MessagePassing
+
+from torch_geometric.nn import aggr
 
 
 class TransformerConv(MessagePassing):
@@ -178,40 +180,29 @@ class TransformerConv(MessagePassing):
 class GraphSeqLM(nn.Module):
     def __init__(
         self,
-        input_dim: int,
-        hidden_dim: int,
-        embedding_dim: int,
-        dna_seq_dim: int,
-        rna_seq_dim: int,
-        protein_seq_dim: int,
-        lm_dim: int,
-        num_nodes: int,
-        num_heads: int,
-        num_classes: int,
-        device: str
+        input_dim: int = 3,
+        hidden_dim: int = 3,
+        embedding_dim: int = 3,
+        lm_dim: int = 3,
+        num_nodes: int = 2111,
+        num_heads: int = 1,
+        num_classes: int = 2,
+        device: str = "cpu"
     ):
         super(GraphSeqLM, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.embedding_dim = embedding_dim
-        self.dna_seq_dim = dna_seq_dim
-        self.rna_seq_dim = rna_seq_dim
-        self.protein_seq_dim = protein_seq_dim
-        self.lm_dim = lm_dim
         self.num_nodes = num_nodes
         self.num_heads = num_heads
         self.num_classes = num_classes
         self.device = device
 
-        self.internal_conv_first, self.internal_conv_block, self.internal_conv_last = self.build_internal_conv_layer(hidden_dim)
-        self.conv_first, self.conv_block, self.conv_last = self.build_conv_layer(hidden_dim, embedding_dim)
+        self.conv_first, self.conv_block, self.conv_last = self.build_conv_layer(
+                    input_dim, hidden_dim, embedding_dim)
         
         self.act = nn.ReLU()
         self.act2 = nn.LeakyReLU(negative_slope=0.1)
-
-        self.x_internal_norm_first = nn.BatchNorm1d(hidden_dim * num_heads)
-        self.x_internal_norm_block = nn.BatchNorm1d(hidden_dim * num_heads)
-        self.x_internal_norm_last = nn.BatchNorm1d(hidden_dim * num_heads)
 
         self.x_norm_first = nn.BatchNorm1d(hidden_dim * num_heads)
         self.x_norm_block = nn.BatchNorm1d(hidden_dim * num_heads)
@@ -226,60 +217,36 @@ class GraphSeqLM(nn.Module):
         self.powermean_aggr = aggr.PowerMeanAggregation(learn=True)
 
         # Sequence models linear transformations
-        self.dna_seq_transform = nn.Linear(dna_seq_dim, lm_dim) # 15659
-        self.rna_seq_transform = nn.Linear(rna_seq_dim, lm_dim) # 15659
-        self.protein_seq_transform = nn.Linear(protein_seq_dim, lm_dim) # 50257
-        # Graph language model linear transformation
-        self.glm_transform = nn.Linear(input_dim + lm_dim, hidden_dim)
-        # Internal embedding linear transformation  
-        self.internal_transform = nn.Linear(hidden_dim * num_heads, hidden_dim)
+        self.dna_seq_transform = nn.Linear(1, lm_dim) # 15659
+        self.rna_seq_transform = nn.Linear(1, lm_dim) # 15659
+        self.protein_seq_transform = nn.Linear(1, lm_dim) # 50257
+        # Pretrain embedding linear transformation  
+        self.pretrain_transform = nn.Linear(1, 1)
         # Modality merging linear transformation
-        self.modality_transform = nn.Linear(hidden_dim + hidden_dim, hidden_dim)
+        self.modality_transform = nn.Linear(lm_dim + 2, input_dim)
         self.graph_prediction = nn.Linear(embedding_dim * num_heads, num_classes)
 
     def reset_parameters(self):
-        super().reset_parameters()
         self.dna_seq_transform.reset_parameters()
         self.rna_seq_transform.reset_parameters()
         self.protein_seq_transform.reset_parameters()
-        self.internal_transform.reset_parameters()
-
-        self.x_internal_norm_first.reset_parameters()
-        self.x_internal_norm_block.reset_parameters()
-        self.x_internal_norm_last.reset_parameters()
-        self.internal_conv_first.reset_parameters()
-        self.internal_conv_block.reset_parameters()
-        self.internal_conv_last.reset_parameters()
-
+        self.pretrain_transform.reset_parameters()
         self.modality_transform.reset_parameters()
-
-        self.x_norm_first.reset_parameters()
-        self.x_norm_block.reset_parameters()
-        self.x_norm_last.reset_parameters()
         self.conv_first.reset_parameters()
         self.conv_block.reset_parameters()
         self.conv_last.reset_parameters()
-
         self.graph_prediction.reset_parameters()
 
-    def build_internal_conv_layer(self, hidden_dim):
-        internal_conv_first = TransformerConv(in_channels=hidden_dim, out_channels=hidden_dim, heads=self.num_heads)
-        internal_conv_block = TransformerConv(in_channels=hidden_dim*self.num_heads, out_channels=hidden_dim, heads=self.num_heads)
-        internal_conv_last = TransformerConv(in_channels=hidden_dim*self.num_heads, out_channels=hidden_dim, heads=self.num_heads)
-        return internal_conv_first, internal_conv_block, internal_conv_last
-
-    def build_conv_layer(self, hidden_dim, embedding_dim):
-        conv_first = TransformerConv(in_channels=hidden_dim, out_channels=hidden_dim, heads=self.num_heads)
+    def build_conv_layer(self, input_dim, hidden_dim, embedding_dim):
+        conv_first = TransformerConv(in_channels=input_dim, out_channels=hidden_dim, heads=self.num_heads)
         conv_block = TransformerConv(in_channels=hidden_dim*self.num_heads, out_channels=hidden_dim, heads=self.num_heads)
         conv_last = TransformerConv(in_channels=hidden_dim*self.num_heads, out_channels=embedding_dim, heads=self.num_heads)
         return conv_first, conv_block, conv_last
 
-    def forward(self, x, internal_edge_index, all_edge_index, dna_embedding, rna_embedding, protein_embedding):
+    def forward(self, x, embedding, all_edge_index, dna_embedding, rna_embedding, protein_embedding):
         # Initial parameters
         num_nodes = int(self.num_nodes)
         batch_size = int(x.size(0) / num_nodes)
-
-        ### LM sequence embedding
         # DNA sequence embedding
         embed_dna_seq = self.dna_seq_transform(dna_embedding)
         # RNA sequence embedding
@@ -292,35 +259,17 @@ class GraphSeqLM(nn.Module):
         expand_embed_seq = embed_seq.expand(batch_size, -1, -1)
         # Reshape the expand_embed_seq to [batch_size * num_nodes, 1]
         reshaped_embed_seq = expand_embed_seq.reshape(-1, 1)
-
-
-        ### Modality merging
         # Concatenate the x (shape: [batch_size * num_nodes, 1]) and embed_seq (shape: [num_nodes, 3])
-        x_glm = torch.cat((x, reshaped_embed_seq), dim=-1)
-        x_glm = self.glm_transform(x_glm)
+        x_cat = torch.cat((x, reshaped_embed_seq), dim=-1)
+        # Concatenate the x_cat (shape: [batch_size, num_nodes, 1]) and embedding (shape: [batch_size, num_nodes, 1])
+        pretrain_embedding = self.pretrain_transform(embedding)
+        x_cat_embed = torch.cat((x_cat, pretrain_embedding), dim=-1)
 
-        ### Internal message passing
-        # Internal - layer1
-        x_internal = self.internal_conv_first(x_glm, internal_edge_index)
-        x_internal = self.act2(x_internal)
-        x_internal = self.x_internal_norm_first(x_internal)
-        # Internal - layer2
-        x_internal = self.internal_conv_block(x_internal, internal_edge_index)
-        x_internal = self.act2(x_internal)
-        x_internal = self.x_internal_norm_block(x_internal)
-        # Internal - layer3
-        x_internal = self.internal_conv_last(x_internal, internal_edge_index)
-        x_internal = self.act2(x_internal)
-        x_internal = self.x_internal_norm_last(x_internal)
-        x_internal_embedding = self.internal_transform(x_internal)
-
-        ### All modality merging
-        # Concatenate the x_internal_embedding (shape: [batch_size, num_nodes, 1]) and embedding (shape: [batch_size, num_nodes, 1])\
-        x_glm_all = torch.cat((x_glm, x_internal_embedding), dim=-1)
-        x_glm_all = self.modality_transform(x_glm_all)
+        # [x_cat_embed] linear transformation
+        x_cat_embed = self.modality_transform(x_cat_embed)
 
         # Graph encoder - layer1 
-        x_embed = self.conv_first(x_glm_all, all_edge_index)
+        x_embed = self.conv_first(x_cat_embed, all_edge_index)
         x_embed = self.x_norm_first(x_embed)
         x_embed = self.act2(x_embed)
         # Graph encoder - layer2
