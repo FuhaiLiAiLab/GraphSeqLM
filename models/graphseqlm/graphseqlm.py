@@ -291,8 +291,7 @@ class GraphSeqLM(nn.Module):
         # Expand the embed_seq to [batch_size, num_nodes, 3]
         expand_embed_seq = embed_seq.expand(batch_size, -1, -1)
         # Reshape the expand_embed_seq to [batch_size * num_nodes, 1]
-        reshaped_embed_seq = expand_embed_seq.reshape(-1, 1)
-
+        reshaped_embed_seq = expand_embed_seq.reshape(-1, self.lm_dim)
 
         ### Modality merging
         # Concatenate the x (shape: [batch_size * num_nodes, 1]) and embed_seq (shape: [num_nodes, 3])
