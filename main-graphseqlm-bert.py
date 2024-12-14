@@ -14,7 +14,6 @@ from torch.utils.data import DataLoader
 
 # custom modules
 from texttable import Texttable
-from models.pretrain_gnn.pretrain_gnn_model import MaskGAE, DegreeDecoder, EdgeDecoder, GNNEncoder
 from models.finetune_llm.model_bert import DNASeqLM, RNASeqLM, ProteinSeqLM
 from models.graphseqlm.graphseqlm import GraphSeqLM
 
@@ -400,7 +399,7 @@ def arg_parse():
     parser.add_argument('--train_embedding_dim', dest='train_embedding_dim', type=int, default=8, help='Embedding dimension of training. (default: 8)')
     parser.add_argument('--lm_dim', dest='lm_dim', type=int, default=1, help='Language model embedding dimension. (default: 1)')
     parser.add_argument('--num_classes', dest='num_classes', type=int, default=2, help='Number of classes for classification. (default: 2)')
-    parser.add_argument('--num_heads', dest='num_heads', type=int, default=2, help='Number of heads for attention. (default: 3)')
+    parser.add_argument('--num_heads', dest='num_heads', type=int, default=2, help='Number of heads for attention. (default: 2)')
 
     parser.add_argument('--train_result_path', nargs='?', dest='train_result_path', default='graphseqlm-bert', help='save path for model result. (default: graphseqlm-bert)')
 
@@ -420,15 +419,13 @@ if __name__ == "__main__":
     torch.cuda.set_device(device)
     print('MAIN DEVICE: ', device)
 
-    train_model(1, args, device)
-
-    # # Train
-    # k = 5
-    # fold_num_train = 10
-    # if args.load == 0: 
-    #     for fold_n in range(1, k + 1):
-    #         args.fold_n = fold_n
-    #         for nth in range(1, fold_num_train + 1):
-    #             train_model(nth, args, device)
-    # else: 
-    #     test_trained_model(args, device)
+    # Train
+    k = 5
+    fold_num_train = 10
+    if args.load == 0: 
+        for fold_n in range(1, k + 1):
+            args.fold_n = fold_n
+            for nth in range(1, fold_num_train + 1):
+                train_model(nth, args, device)
+    else: 
+        test_trained_model(args, device)

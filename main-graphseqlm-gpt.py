@@ -14,7 +14,6 @@ from torch.utils.data import DataLoader
 
 # custom modules
 from texttable import Texttable
-from models.pretrain_gnn.pretrain_gnn_model import MaskGAE, DegreeDecoder, EdgeDecoder, GNNEncoder
 from models.finetune_llm.model_gpt import DNAGPT_LM, RNAGPT_LM, ProtGPT_LM
 from models.graphseqlm.graphseqlm import GraphSeqLM
 
@@ -45,31 +44,6 @@ def write_best_model_info(fold_n, path, max_test_acc_id, epoch_loss_list, epoch_
     with open(os.path.join(path, 'best_model_info.txt'), 'w') as file:
         file.write(best_model_info)
 
-def build_pretrain_model(args, num_feature, num_node, device):
-    encoder = GNNEncoder(num_feature, args.encoder_channels, args.hidden_channels,
-                        num_layers=args.encoder_layers, dropout=args.encoder_dropout,
-                        bn=args.bn, layer=args.layer, activation=args.encoder_activation)
-
-    internal_encoder = GNNEncoder(num_feature, args.input_dim, args.input_dim,
-                            num_layers=args.internal_encoder_layers, dropout=args.encoder_dropout,
-                            bn=args.bn, layer=args.layer, activation=args.encoder_activation)
-
-    edge_decoder = EdgeDecoder(args.hidden_channels, args.decoder_channels,
-                            num_layers=args.decoder_layers, dropout=args.decoder_dropout)
-
-    degree_decoder = DegreeDecoder(args.hidden_channels, args.decoder_channels,
-                                num_layers=args.decoder_layers, dropout=args.decoder_dropout)
-
-    pretrain_model = MaskGAE(input_dim=args.input_dim, 
-                    num_node=num_node,
-                    encoder=encoder, 
-                    internal_encoder=internal_encoder,
-                    edge_decoder=edge_decoder, 
-                    degree_decoder=degree_decoder, 
-                    edge_p=args.edge_p,
-                    node_p=args.node_p).to(device)
-    return pretrain_model
-
 def build_finetune_model(device):
     # Create an instance of DNAGPT_LM
     dna_gpt_lm = DNAGPT_LM(model_path="./models/finetune_llm/checkpoints", model_name="dna_gpt0.1b_h", device=device)
@@ -77,15 +51,18 @@ def build_finetune_model(device):
     prot_gpt_lm = ProtGPT_LM(model_name="nferruz/ProtGPT2", device=device)
     return dna_gpt_lm, rna_gpt_lm, prot_gpt_lm
 
-def build_graphclas_model(args, num_node, device):
+def build_graphclas_model(args, num_node, dna_seq_dim, rna_seq_dim, protein_seq_dim, device):
     model = GraphSeqLM(input_dim=args.train_input_dim, 
-                       hidden_dim=args.train_hidden_dim, 
-                       embedding_dim=args.train_embedding_dim, 
-                       lm_dim=args.lm_dim,
-                       num_nodes=num_node, 
-                       num_heads=args.num_heads,
-                       num_classes=args.num_classes,
-                       device=device).to(device)
+                        hidden_dim=args.train_hidden_dim, 
+                        embedding_dim=args.train_embedding_dim,
+                        dna_seq_dim=dna_seq_dim,
+                        rna_seq_dim=rna_seq_dim,
+                        protein_seq_dim=protein_seq_dim,
+                        lm_dim=args.lm_dim,
+                        num_nodes=num_node, 
+                        num_heads=args.num_heads,
+                        num_classes=args.num_classes,
+                        device=device).to(device)
     return model
 
 def language_model_embedding(num_type_node, dna_gpt_lm, rna_gpt_lm, prot_gpt_lm, seq):
@@ -104,7 +81,7 @@ def language_model_embedding(num_type_node, dna_gpt_lm, rna_gpt_lm, prot_gpt_lm,
     protein_embedding = prot_gpt_lm.generate_embeddings(protein_seq)
     return dna_embedding, rna_embedding, protein_embedding
 
-def train_graphclas_model(train_dataset_loader, dna_embedding, rna_embedding, protein_embedding, pretrain_model, model, device, args):
+def train_graphclas_model(train_dataset_loader, dna_embedding, rna_embedding, protein_embedding, model, device, args):
     optimizer = torch.optim.Adam(filter(lambda p : p.requires_grad, model.parameters()), lr=args.train_lr, eps=args.eps, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=20, factor=0.9)
     batch_loss = 0
@@ -113,18 +90,15 @@ def train_graphclas_model(train_dataset_loader, dna_embedding, rna_embedding, pr
         x = Variable(data.x.float(), requires_grad=False).to(device)
         internal_edge_index = Variable(data.internal_edge_index, requires_grad=False).to(device)
         ppi_edge_index = Variable(data.edge_index, requires_grad=False).to(device)
-        edge_index = Variable(data.all_edge_index, requires_grad=False).to(device)
+        all_edge_index = Variable(data.all_edge_index, requires_grad=False).to(device)
         label = Variable(data.label, requires_grad=False).to(device)
-        # Use pretrained model to get the embedding
-        z = pretrain_model.internal_encoder(x, internal_edge_index)
-        embedding = pretrain_model.encoder.get_embedding(z, ppi_edge_index, mode='last') # mode='cat'
         # Get the language model embedding
         dna_embedding = Variable(torch.Tensor(dna_embedding), requires_grad=False).to(device)
         rna_embedding = Variable(torch.Tensor(rna_embedding), requires_grad=False).to(device)
         protein_embedding = Variable(torch.Tensor(protein_embedding), requires_grad=False).to(device)
         # Use graphseqlm model to get the output
         x = x + torch.normal(mean=0, std=0.01, size=x.size()).to(device) # Add noise to x
-        output, ypred = model(x, embedding, edge_index, dna_embedding, rna_embedding, protein_embedding)
+        output, ypred = model(x, internal_edge_index, all_edge_index, dna_embedding, rna_embedding, protein_embedding)
         loss = model.loss(output, label)
         loss.backward()
         batch_loss += loss.item()
@@ -132,32 +106,25 @@ def train_graphclas_model(train_dataset_loader, dna_embedding, rna_embedding, pr
         nn.utils.clip_grad_norm_(model.parameters(), 2.0)
         optimizer.step()
         scheduler.step(loss)
-        # # check pretrain model parameters
-        # state_dict = pretrain_model.internal_encoder.state_dict()
-        # print(state_dict['convs.1.lin.weight'])
-        # print(model.embedding.weight.data)
     torch.cuda.empty_cache()
     return model, batch_loss, batch_acc, ypred
 
 
-def test_graphclas_model(test_dataset_loader, dna_embedding, rna_embedding, protein_embedding, pretrain_model, model, device):
+def test_graphclas_model(test_dataset_loader, dna_embedding, rna_embedding, protein_embedding, model, device):
     batch_loss = 0
     all_ypred = np.zeros((1, 1))
     for batch_idx, data in enumerate(test_dataset_loader):
         x = Variable(data.x.float(), requires_grad=False).to(device)
         internal_edge_index = Variable(data.internal_edge_index, requires_grad=False).to(device)
         ppi_edge_index = Variable(data.edge_index, requires_grad=False).to(device)
-        edge_index = Variable(data.all_edge_index, requires_grad=False).to(device)
+        all_edge_index = Variable(data.all_edge_index, requires_grad=False).to(device)
         label = Variable(data.label, requires_grad=False).to(device)
-        # Use pretrained model to get the embedding
-        z = pretrain_model.internal_encoder(x, internal_edge_index)
-        embedding = pretrain_model.encoder.get_embedding(z, ppi_edge_index, mode='last') # mode='cat'
         # Get the language model embedding
         dna_embedding = Variable(torch.Tensor(dna_embedding), requires_grad=False).to(device)
         rna_embedding = Variable(torch.Tensor(rna_embedding), requires_grad=False).to(device)
         protein_embedding = Variable(torch.Tensor(protein_embedding), requires_grad=False).to(device)
         # Use graphseqlm model to get the output
-        output, ypred = model(x, embedding, edge_index, dna_embedding, rna_embedding, protein_embedding)
+        output, ypred = model(x, internal_edge_index, all_edge_index, dna_embedding, rna_embedding, protein_embedding)
         loss = model.loss(output, label)
         batch_loss += loss.item()
         batch_acc = accuracy_score(label.cpu().numpy(), ypred.cpu().numpy())
@@ -187,11 +154,6 @@ def train_model(nth, args, device):
     internal_edge_index = torch.from_numpy(np.load(form_data_path + '/internal_edge_index.npy') ).long()
     ppi_edge_index = torch.from_numpy(np.load(form_data_path + '/ppi_edge_index.npy') ).long()
 
-    # Load pretrain model
-    pretrain_model = build_pretrain_model(args, num_feature, num_node, device)
-    pretrain_model.load_state_dict(torch.load(args.save_path))
-    pretrain_model.eval()
-
     # Load finetuned language model
     if args.load_lm_embed == 1:
         dna_embedding = np.load(form_data_path + '/dna_gpt_embedding.npy')
@@ -209,8 +171,13 @@ def train_model(nth, args, device):
     rna_embedding = np.mean(rna_embedding, axis=1).reshape(-1, 1)
     protein_embedding = np.mean(protein_embedding, axis=1).reshape(-1, 1)
 
+    # Fetch sequence dimension
+    dna_seq_dim = dna_embedding.shape[1]
+    rna_seq_dim = rna_embedding.shape[1]
+    protein_seq_dim = protein_embedding.shape[1]
+
     # Training model stage starts
-    model = build_graphclas_model(args, num_node, device)
+    model = build_graphclas_model(args, num_node, dna_seq_dim, rna_seq_dim, protein_seq_dim, device)
     dl_input_num = xTr.shape[0]
     epoch_num = args.num_train_epoch
     batch_size = args.batch_size
@@ -254,7 +221,7 @@ def train_model(nth, args, device):
             geo_train_datalist = read_batch(index, upper_index, xTr, yTr, num_feature, num_node, all_edge_index, internal_edge_index, ppi_edge_index)
             train_dataset_loader = GeoGraphLoader.load_graph(geo_train_datalist, args)
             model, batch_loss, batch_acc, batch_ypred = train_graphclas_model(train_dataset_loader, dna_embedding, rna_embedding, protein_embedding,
-                                                                               pretrain_model, model, device, args)
+                                                                               model, device, args)
             print('BATCH LOSS: ', batch_loss)
             print('BATCH ACCURACY: ', batch_acc)
             batch_loss_list.append(batch_loss)
@@ -294,7 +261,7 @@ def train_model(nth, args, device):
         print(epoch_loss_list)
 
         # # # Test model on test dataset
-        test_acc, test_loss, tmp_test_input_df = test_model(args, pretrain_model, model, device, i)
+        test_acc, test_loss, tmp_test_input_df = test_model(args, model, device, i)
         test_acc_list.append(test_acc)
         test_loss_list.append(test_loss)
         tmp_test_input_df.to_csv(path + '/TestPred' + str(i) + '.txt', index=False, header=True)
@@ -319,7 +286,7 @@ def train_model(nth, args, device):
         print('BEST MODEL TEST ACCURACY: ', test_acc_list[max_test_acc_id - 1])
         write_best_model_info(fold_n, path, max_test_acc_id, epoch_loss_list, epoch_acc_list, test_loss_list, test_acc_list)
 
-def test_model(args, pretrain_model, model, device, i):
+def test_model(args, model, device, i):
     print('-------------------------- TEST START --------------------------')
     print('-------------------------- TEST START --------------------------')
     print('-------------------------- TEST START --------------------------')
@@ -365,7 +332,7 @@ def test_model(args, pretrain_model, model, device, i):
         test_dataset_loader = GeoGraphLoader.load_graph(geo_datalist, args)
         print('TEST MODEL...')
         model, batch_loss, batch_acc, batch_ypred = test_graphclas_model(test_dataset_loader, dna_embedding, rna_embedding, protein_embedding,
-                                                                          pretrain_model, model, device)
+                                                                          model, device)
         print('BATCH LOSS: ', batch_loss)
         batch_loss_list.append(batch_loss)
         print('BATCH ACCURACY: ', batch_acc)
@@ -408,55 +375,42 @@ def test_trained_model(args, device):
     gene_name_list = list(final_annotation_gene_df['Gene_name'])
     num_node = len(gene_name_list)
     num_feature = 1
-    # Load pretrain model
-    pretrain_model = build_pretrain_model(args, num_feature, num_node, device)
-    pretrain_model.load_state_dict(torch.load(args.save_path))
-    pretrain_model.eval()
+    # Language sequence embedding
+    dna_embedding = np.load(form_data_path + '/dna_seq_embedding.npy')
+    rna_embedding = np.load(form_data_path + '/rna_seq_embedding.npy')
+    protein_embedding = np.load(form_data_path + '/protein_seq_embedding.npy')
+    dna_seq_dim = dna_embedding.shape[1]
+    rna_seq_dim = rna_embedding.shape[1]
+    protein_seq_dim = protein_embedding.shape[1]
     # Load model
-    model = build_graphclas_model(args, num_node, device)
+    model = build_graphclas_model(args, num_node, dna_seq_dim, rna_seq_dim, protein_seq_dim, device)
     folder_name = 'epoch_' + str(args.num_train_epoch) + '_fold_' + str(fold_n) + '_best'
     path = './data/' + dataset + '-result/' + args.train_result_path + '/%s' % (folder_name)
     model.load_state_dict(torch.load(path + '/best_train_model.pt'))
-    test_model(args, pretrain_model, model, device, i=0)
+    test_model(args, model, device, i=0)
 
 
 def arg_parse():
     parser = argparse.ArgumentParser()
-    # pre-training parameters
-    parser.add_argument('--input_dim', type=int, default=1, help='Input feature dimension. (default: 1)')
-    parser.add_argument('--encoder_channels', type=int, default=1, help='Channels of GNN encoder layers. (default: 1)')
-    parser.add_argument('--hidden_channels', type=int, default=1, help='Channels of hidden representation. (default: 1)')
-    parser.add_argument('--decoder_channels', type=int, default=1, help='Channels of decoder layers. (default: 1)')
-    parser.add_argument('--encoder_layers', type=int, default=2, help='Number of layers for encoder. (default: 2)')
-    parser.add_argument('--internal_encoder_layers', type=int, default=3, help='Number of layers for internal encoder. (default: 3)')
-    parser.add_argument('--decoder_layers', type=int, default=2, help='Number of layers for decoders. (default: 2)')
-    parser.add_argument('--encoder_dropout', type=float, default=0.8, help='Dropout probability of encoder. (default: 0.8)')
-    parser.add_argument('--decoder_dropout', type=float, default=0.2, help='Dropout probability of decoder. (default: 0.2)')
-    parser.add_argument('--edge_p', type=float, default=0.001, help='Mask ratio or sample ratio for EdgeMask')
-    parser.add_argument('--node_p', type=float, default=0.001, help='Mask ratio or sample ratio for NodeMask')
-    parser.add_argument('--bn', action='store_true', help='Whether to use batch normalization. (default: False)')
-    parser.add_argument('--layer', nargs='?', default='gat', help='GNN layer, (default: gat)')
-    parser.add_argument('--encoder_activation', nargs='?', default='elu', help='Activation function for GNN encoder, (default: elu)')
-    parser.add_argument('--save_path', nargs='?', default='./models/pretrain_gnn/pretrained-gnn.pt', 
-                        help='save path for model. (default: ./models/pretrain_gnn/pretrained-gnn.pt)')
+    # Language model parameters
     parser.add_argument('--load_lm_embed', dest='load_lm_embed', type=int, default=1, help='Whether to load the language model embedding. (default: 1)')
 
-    # training parameters
+    # Training parameters
     parser.add_argument('--fold_n', dest='fold_n', type=int, default=1, help='Fold number for training. (default: 1)')
     parser.add_argument('--train_dataset', dest='train_dataset', type=str, default='UCSC', help='Dataset for training. (default: UCSC)')
     parser.add_argument('--num_train_epoch', dest='num_train_epoch', type=int, default=50, help='Number of epochs to train.')
     parser.add_argument('--batch_size', dest='batch_size', type=int, default=32, help='Batch size of training.')
     parser.add_argument('--num_workers', dest = 'num_workers', type = int, default=0, help = 'Number of workers to load data.')
-    parser.add_argument('--train_lr', dest='train_lr', type=float, default=0.002, help='Learning rate for training. (default: 0.002)')
+    parser.add_argument('--train_lr', dest='train_lr', type=float, default=0.005, help='Learning rate for training. (default: 0.005)')
     parser.add_argument('--weight_decay', dest='weight_decay', type=float, default=1e-5, help='Weight decay for training. (default: 1e-5)')
     parser.add_argument('--eps', dest='eps', type=float, default=1e-7, help='Epsilon for Adam. (default: 1e-7)')
 
-    parser.add_argument('--train_input_dim', dest='train_input_dim', type=int, default=3, help='Input dimension of training. (default: 3)')
-    parser.add_argument('--train_hidden_dim', dest='train_hidden_dim', type=int, default=9, help='Hidden dimension of training. (default: 9)')
-    parser.add_argument('--train_embedding_dim', dest='train_embedding_dim', type=int, default=9, help='Embedding dimension of training. (default: 9)')
+    parser.add_argument('--train_input_dim', dest='train_input_dim', type=int, default=1, help='Input dimension of training. (default: 1)')
+    parser.add_argument('--train_hidden_dim', dest='train_hidden_dim', type=int, default=8, help='Hidden dimension of training. (default: 8)')
+    parser.add_argument('--train_embedding_dim', dest='train_embedding_dim', type=int, default=8, help='Embedding dimension of training. (default: 8)')
     parser.add_argument('--lm_dim', dest='lm_dim', type=int, default=1, help='Language model embedding dimension. (default: 1)')
     parser.add_argument('--num_classes', dest='num_classes', type=int, default=2, help='Number of classes for classification. (default: 2)')
-    parser.add_argument('--num_heads', dest='num_heads', type=int, default=3, help='Number of heads for attention. (default: 3)')
+    parser.add_argument('--num_heads', dest='num_heads', type=int, default=2, help='Number of heads for attention. (default: 2)')
 
     parser.add_argument('--train_result_path', nargs='?', dest='train_result_path', default='graphseqlm-gpt', help='save path for model result. (default: graphseqlm-gpt)')
 
