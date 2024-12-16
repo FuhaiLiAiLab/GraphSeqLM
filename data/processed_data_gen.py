@@ -166,7 +166,6 @@ print(nan_counts)
 survival_filtered_feature_df['vital_status'] = survival_filtered_feature_df['vital_status'].map({'Alive': 0.0, 'Dead': 1.0})
 survival_filtered_feature_df['OS'] == survival_filtered_feature_df['vital_status']
 
-
 # Check if each row in Column1 and Column2 have the same value
 rows_same = (survival_filtered_feature_df['OS'] == survival_filtered_feature_df['vital_status']).all()
 print("All rows have the same value in column 'OS' and column 'vital_status' :", rows_same)
@@ -181,9 +180,7 @@ cancer_type_df_dict = {}
 for cancer_type in cancer_types:
     cancer_type_df_dict[cancer_type] = survival_filtered_feature_df[survival_filtered_feature_df['cancer type abbreviation'] == cancer_type]
     cancer_type_df_dict[cancer_type] = cancer_type_df_dict[cancer_type].drop(columns=['cancer type abbreviation'])
-    # Example directory path
     dir_path = os.path.join(graph_output_folder, cancer_type)
-    # Use makedirs with exist_ok=True to avoid errors if the directory already exists
     os.makedirs(dir_path, exist_ok=True)
     cancer_type_df_dict[cancer_type].to_csv(os.path.join(graph_output_folder, cancer_type, 'survival-label.csv'), index=False)
     print(cancer_type, cancer_type_df_dict[cancer_type].shape[0])
@@ -338,15 +335,57 @@ np.save(os.path.join(graph_output_folder, 'seq.npy'), seq)
 # ### 8.6 K-fold split
 
 import os
+
+# Set the new directory path
+new_directory = '/home/heming/vs-files/GraphSeqLM/data/'
+
+# Change to the new directory
+os.chdir(new_directory)
+
+current_directory = os.getcwd()
+current_directory
+
+import os
 import numpy as np
 import pandas as pd
 graph_output_folder = 'UCSC-graph-data'
 x = np.load(os.path.join(graph_output_folder, 'x.npy'))
 y = np.load(os.path.join(graph_output_folder, 'y.npy'))
 survival_label_df = pd.read_csv(os.path.join(graph_output_folder, 'survival-label.csv'))
+print(x.shape)
+print(y.shape)
 
+
+# Separate the sample by cancer type and show each cancer type's number of samples and their names
+cancer_types = survival_label_df['cancer type abbreviation'].unique()
+print(cancer_types)
+cancer_type_df_dict = {}
+for cancer_type in cancer_types:
+    cancer_type_df_dict[cancer_type] = survival_label_df[survival_label_df['cancer type abbreviation'] == cancer_type]
+    cancer_type_df_dict[cancer_type] = cancer_type_df_dict[cancer_type].drop(columns=['cancer type abbreviation'])
+    dir_path = os.path.join(graph_output_folder, cancer_type)
+    os.makedirs(dir_path, exist_ok=True)
+    cancer_type_df_dict[cancer_type].to_csv(os.path.join(graph_output_folder, cancer_type, 'survival-label.csv'), index=False)
+    print(cancer_type, cancer_type_df_dict[cancer_type].shape[0])
+
+# Remove rows corresponding to cancer type 'OV'
+mask = survival_label_df['cancer type abbreviation'] != 'OV'
+survival_label_df = survival_label_df[mask].reset_index(drop=True)
+x = x[mask.values]
+y = y[mask.values]
+
+# Save the updated numpy arrays and survival label dataframe
+np.save(os.path.join(graph_output_folder, 'x.npy'), x)
+np.save(os.path.join(graph_output_folder, 'y.npy'), y)
+survival_label_df.to_csv(os.path.join(graph_output_folder, 'survival-label.csv'), index=False)
+
+# Confirm changes
+print(f"Updated x shape: {x.shape}")
+print(f"Updated y shape: {y.shape}")
+print(f"Updated survival_label_df shape: {survival_label_df.shape}")
+
+# Initialize a 5-fold cross-validator
 from sklearn.model_selection import StratifiedKFold
-# Initialize 5-fold cross-validator
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
 # Prepare dictionaries to hold the splits
@@ -360,7 +399,7 @@ folds_data = {
 }
 
 # Generate the 5-fold splits
-for train_index, test_index in kf.split(x, y):
+for train_index, test_index in kf.split(x, survival_label_df['cancer type abbreviation']):
     folds_data["x_train"].append(x[train_index])
     folds_data["y_train"].append(y[train_index])
     folds_data["label_train"].append(survival_label_df.iloc[train_index])
@@ -369,7 +408,7 @@ for train_index, test_index in kf.split(x, y):
     folds_data["y_test"].append(y[test_index])
     folds_data["label_test"].append(survival_label_df.iloc[test_index])
 
-# Save folds into variables for direct access
+# Save splits into variables for direct access
 for i in range(5):
     globals()[f"xTr{i+1}"] = folds_data["x_train"][i]
     globals()[f"yTr{i+1}"] = folds_data["y_train"][i]
@@ -379,27 +418,156 @@ for i in range(5):
     globals()[f"yTe{i+1}"] = folds_data["y_test"][i]
     globals()[f"label_test{i+1}"] = folds_data["label_test"][i]
 
-# Verify the shapes of generated folds
+# Inspect the summary of splits
+fold_summary = {
+    f"Fold {i+1}": {
+        "Train Size": len(globals()[f"xTr{i+1}"]),
+        "Test Size": len(globals()[f"xTe{i+1}"]),
+        "Train Cancer Types": globals()[f"label_train{i+1}"]['cancer type abbreviation'].value_counts().to_dict(),
+        "Test Cancer Types": globals()[f"label_test{i+1}"]['cancer type abbreviation'].value_counts().to_dict(),
+    }
+    for i in range(5)
+}
+
+# Save the splits into corresponding cancer type folders and overall folder
 for i in range(5):
-    print(f"Fold {i+1}:")
-    print(f"xTr{i+1}.shape: {globals()[f'xTr{i+1}'].shape}, xTe{i+1}.shape: {globals()[f'xTe{i+1}'].shape}")
-    print(f"yTr{i+1}.shape: {globals()[f'yTr{i+1}'].shape}, yTe{i+1}.shape: {globals()[f'yTe{i+1}'].shape}")
-    print(f"label_train{i+1}.shape: {globals()[f'label_train{i+1}'].shape}, label_test{i+1}.shape: {globals()[f'label_test{i+1}'].shape}")
+    # Extract the train and test data for the current fold
+    x_train = folds_data["x_train"][i]
+    y_train = folds_data["y_train"][i]
+    label_train = folds_data["label_train"][i].reset_index(drop=True)
+    x_test = folds_data["x_test"][i]
+    y_test = folds_data["y_test"][i]
+    label_test = folds_data["label_test"][i].reset_index(drop=True)
+
+    # Save overall label files
+    label_train.to_csv(os.path.join(graph_output_folder, f"label_train{i+1}.csv"), index=False)
+    label_test.to_csv(os.path.join(graph_output_folder, f"label_test{i+1}.csv"), index=False)
+
+    # Group data by cancer type for train and test sets
+    for cancer_type in label_train['cancer type abbreviation'].unique():
+        # Create a folder for the cancer type if it doesn't exist
+        cancer_folder = os.path.join(graph_output_folder, cancer_type)
+        os.makedirs(cancer_folder, exist_ok=True)
+
+        # Get indices within the fold for the cancer type
+        cancer_indices = label_train[label_train['cancer type abbreviation'] == cancer_type].index.tolist()
+
+        # Save the corresponding train data for the cancer type
+        np.save(os.path.join(cancer_folder, f"xTr{i+1}.npy"), x_train[cancer_indices])
+        np.save(os.path.join(cancer_folder, f"yTr{i+1}.npy"), y_train[cancer_indices])
+
+        # Save the cancer-specific train labels
+        label_train.iloc[cancer_indices].to_csv(os.path.join(cancer_folder, f"label_train{i+1}.csv"), index=False)
+
+    for cancer_type in label_test['cancer type abbreviation'].unique():
+        # Create a folder for the cancer type if it doesn't exist
+        cancer_folder = os.path.join(graph_output_folder, cancer_type)
+        os.makedirs(cancer_folder, exist_ok=True)
+
+        # Get indices within the fold for the cancer type
+        cancer_indices = label_test[label_test['cancer type abbreviation'] == cancer_type].index.tolist()
+
+        # Save the corresponding test data for the cancer type
+        np.save(os.path.join(cancer_folder, f"xTe{i+1}.npy"), x_test[cancer_indices])
+        np.save(os.path.join(cancer_folder, f"yTe{i+1}.npy"), y_test[cancer_indices])
+
+        # Save the cancer-specific test labels
+        label_test.iloc[cancer_indices].to_csv(os.path.join(cancer_folder, f"label_test{i+1}.csv"), index=False)
+
+print("All folds have been processed and saved successfully into cancer type and overall folders.")
+
+# Function to check consistency between OS column and y arrays for each cancer type and overall
+def check_consistency_by_cancer_type():
+    overall_consistency = {"Training": True, "Testing": True}
+    
+    for i in range(5):
+        print(f"Fold {i+1}:")
+        for cancer_type in survival_label_df['cancer type abbreviation'].unique():
+            cancer_folder = os.path.join(graph_output_folder, cancer_type)
+            
+            # Load training data
+            train_y = np.load(os.path.join(cancer_folder, f"yTr{i+1}.npy"))
+            train_label_path = os.path.join(cancer_folder, f"label_train{i+1}.csv")
+            train_os = pd.read_csv(train_label_path)['OS'].values.reshape(-1, 1)
+            train_consistent = np.array_equal(train_os, train_y)
+            overall_consistency["Training"] &= train_consistent
+
+            # Load testing data
+            test_y = np.load(os.path.join(cancer_folder, f"yTe{i+1}.npy"))
+            test_label_path = os.path.join(cancer_folder, f"label_test{i+1}.csv")
+            test_os = pd.read_csv(test_label_path)['OS'].values.reshape(-1, 1)
+            test_consistent = np.array_equal(test_os, test_y)
+            overall_consistency["Testing"] &= test_consistent
+
+            # Print results for the cancer type
+            print(f"  Cancer Type: {cancer_type}")
+            print(f"    Training consistency: {'Consistent' if train_consistent else 'Inconsistent'}")
+            print(f"    Testing consistency: {'Consistent' if test_consistent else 'Inconsistent'}")
+        
+        print()
+
+    # Print overall consistency
+    print("Overall Consistency:")
+    print(f"  Training: {'Consistent' if overall_consistency['Training'] else 'Inconsistent'}")
+    print(f"  Testing: {'Consistent' if overall_consistency['Testing'] else 'Inconsistent'}")
+
+# Run the consistency check
+check_consistency_by_cancer_type()
+
+import os
+import pandas as pd
+
+# Paths
+graph_output_folder = 'UCSC-graph-data'
+survival_label_path = os.path.join(graph_output_folder, 'survival-label.csv')
+
+# Load the original survival label file
+survival_label_df = pd.read_csv(survival_label_path)
+
+# Get unique cancer types
+cancer_types = survival_label_df['cancer type abbreviation'].unique()
+
+# Check consistency for each cancer type folder
+for cancer_type in cancer_types:
+    cancer_folder = os.path.join(graph_output_folder, cancer_type)
+    if not os.path.exists(cancer_folder):
+        print(f"Folder for cancer type {cancer_type} does not exist. Skipping.")
+        continue
+
+    # Load original survival labels for the current cancer type
+    original_labels = survival_label_df[survival_label_df['cancer type abbreviation'] == cancer_type]
+
+    # Check consistency for each fold
+    for i in range(5):
+        # Load test labels
+        test_label_path = os.path.join(cancer_folder, f"label_test{i+1}.csv")
+        if os.path.exists(test_label_path):
+            fold_test_labels = pd.read_csv(test_label_path)
+        else:
+            print(f"  Missing label_test{i+1}.csv for {cancer_type}. Skipping this fold.")
+            continue
+
+        # Load train labels
+        train_label_path = os.path.join(cancer_folder, f"label_train{i+1}.csv")
+        if os.path.exists(train_label_path):
+            fold_train_labels = pd.read_csv(train_label_path)
+        else:
+            print(f"  Missing label_train{i+1}.csv for {cancer_type}. Skipping this fold.")
+            continue
+
+        # Combine train and test labels for this fold
+        combined_labels = pd.concat([fold_test_labels, fold_train_labels], ignore_index=True)
+
+        # Check consistency
+        fold_consistent = combined_labels.sort_values(by="sample").reset_index(drop=True).equals(
+            original_labels.sort_values(by="sample").reset_index(drop=True)
+        )
+
+        # Print result for this fold
+        print(f"Cancer Type: {cancer_type}, Fold {i+1}")
+        print(f"  Train + Test consistency: {'Consistent' if fold_consistent else 'Inconsistent'}")
     print()
 
-    # Save training data
-    np.save(os.path.join(graph_output_folder, f"xTr{i+1}.npy"), globals()[f"xTr{i+1}"])
-    np.save(os.path.join(graph_output_folder, f"yTr{i+1}.npy"), globals()[f"yTr{i+1}"])
-    globals()[f"label_train{i+1}"].to_csv(
-        os.path.join(graph_output_folder, f"label_train{i+1}.csv"), index=False
-    )
-
-    # Save testing data
-    np.save(os.path.join(graph_output_folder, f"xTe{i+1}.npy"), globals()[f"xTe{i+1}"])
-    np.save(os.path.join(graph_output_folder, f"yTe{i+1}.npy"), globals()[f"yTe{i+1}"])
-    globals()[f"label_test{i+1}"].to_csv(
-        os.path.join(graph_output_folder, f"label_test{i+1}.csv"), index=False
-    )
 
 # Function to check consistency between OS column and y arrays
 def check_consistency():
