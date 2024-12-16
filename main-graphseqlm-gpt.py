@@ -412,7 +412,7 @@ def arg_parse():
     parser.add_argument('--num_classes', dest='num_classes', type=int, default=2, help='Number of classes for classification. (default: 2)')
     parser.add_argument('--num_heads', dest='num_heads', type=int, default=2, help='Number of heads for attention. (default: 2)')
 
-    parser.add_argument('--train_result_path', nargs='?', dest='train_result_path', default='graphseqlm-gpt', help='save path for model result. (default: graphseqlm-gpt)')
+    parser.add_argument('--train_result_path', nargs='?', dest='train_result_path', default='graphseqlm-gpt', help='save path for model result.')
 
     # test parameters by loading model (both pretrained and trained)
     parser.add_argument('--load', dest='load', type=int, default=0, help='Whether to load the model. (default: 0)')
