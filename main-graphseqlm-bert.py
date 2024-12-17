@@ -158,17 +158,32 @@ def train_model(nth, args, device):
     internal_edge_index = torch.from_numpy(np.load(form_data_path + '/internal_edge_index.npy') ).long()
     ppi_edge_index = torch.from_numpy(np.load(form_data_path + '/ppi_edge_index.npy') ).long()
 
-    # Load finetuned language model
-    if args.load_lm_embed == 1:
-        dna_embedding = np.load(form_data_path + '/dna_seq_embedding.npy')
-        rna_embedding = np.load(form_data_path + '/rna_seq_embedding.npy')
-        protein_embedding = np.load(form_data_path + '/protein_seq_embedding.npy')
+    # Define paths for the embeddings
+    dna_embedding_path = os.path.join(form_data_path, 'dna_seq_embedding.npy')
+    rna_embedding_path = os.path.join(form_data_path, 'rna_seq_embedding.npy')
+    protein_embedding_path = os.path.join(form_data_path, 'protein_seq_embedding.npy')
+
+    # Check if all the embedding files exist
+    if os.path.exists(dna_embedding_path) and os.path.exists(rna_embedding_path) and os.path.exists(protein_embedding_path):
+        print("Loading precomputed embeddings...")
+        dna_embedding = np.load(dna_embedding_path)
+        rna_embedding = np.load(rna_embedding_path)
+        protein_embedding = np.load(protein_embedding_path)
     else:
+        print("Precomputed embeddings not found. Generating embeddings...")
+        # Build the fine-tuned language models
         dna_seq_model, rna_seq_model, protein_seq_model = build_finetune_model(device)
-        dna_embedding, rna_embedding, protein_embedding = language_model_embedding(num_type_node, dna_seq_model, rna_seq_model, protein_seq_model, seq)
-        np.save(form_data_path + '/dna_seq_embedding.npy', dna_embedding.cpu().numpy())
-        np.save(form_data_path + '/rna_seq_embedding.npy', rna_embedding.cpu().numpy())
-        np.save(form_data_path + '/protein_seq_embedding.npy', protein_embedding.cpu().numpy())
+        
+        # Generate embeddings
+        dna_embedding, rna_embedding, protein_embedding = language_model_embedding(
+            num_type_node, dna_seq_model, rna_seq_model, protein_seq_model, seq
+        )
+    
+    # Save the embeddings
+    np.save(dna_embedding_path, dna_embedding.cpu().numpy())
+    np.save(rna_embedding_path, rna_embedding.cpu().numpy())
+    np.save(protein_embedding_path, protein_embedding.cpu().numpy())
+    print("Embeddings generated and saved.")
 
     # Fetch sequence dimension
     dna_seq_dim = dna_embedding.shape[1]
