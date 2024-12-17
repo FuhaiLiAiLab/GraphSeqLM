@@ -1,8 +1,7 @@
-Model,Train Loss (avg ± std),Train Accuracy (avg ± std),Test Loss (avg ± std),Test Accuracy (avg ± std)
-gat,0.6883 ± 0.0055,0.7036 ± 0.0757,0.6982 ± 0.0087,0.7387 ± 0.0012
-gcn,0.6739 ± 0.0083,0.6116 ± 0.0561,0.82 ± 0.185,0.7424 ± 0.0041
-graphformer,0.6556 ± 0.0088,0.624 ± 0.0099,0.7982 ± 0.0676,0.7507 ± 0.0027
-graphseqlm-bert,0.6681 ± 0.0099,0.6135 ± 0.046,0.7385 ± 0.0685,0.7506 ± 0.0074
-graphseqlm-bert-best,0.6622 ± 0.01,0.6133 ± 0.0204,0.7027 ± 0.0292,0.7588 ± 0.0062
-graphseqlm-gpt,0.6694 ± 0.0118,0.6075 ± 0.0373,0.7472 ± 0.0644,0.7475 ± 0.0052
-graphseqlm-gpt-best,0.6648 ± 0.0067,0.6158 ± 0.0122,0.7291 ± 0.0008,0.7573 ± 0.0009
+,Cancer,Model_Cancer,# of Samples,Test Loss,Test Accuracy,Test F1-Score
+0,ACC,graphseqlm-bert-ACC,"45 (Survival: 13, Death: 32)",0.6834 ± 0.0773,0.9111 ± 0.0497,0.7981 ± 0.1404
+1,ACC,graphseqlm-gpt-ACC,"45 (Survival: 13, Death: 32)",0.6811 ± 0.008,0.8444 ± 0.0994,0.64 ± 0.1461
+2,BLCA,graphseqlm-bert-BLCA,"116 (Survival: 60, Death: 56)",0.7687 ± 0.2122,0.7667 ± 0.0519,0.7762 ± 0.0643
+3,BLCA,graphseqlm-gpt-BLCA,"116 (Survival: 60, Death: 56)",0.6777 ± 0.0885,0.7754 ± 0.0584,0.768 ± 0.1016
+4,UCS,graphseqlm-bert-UCS,"48 (Survival: 31, Death: 17)",1.1443 ± 0.8187,0.8356 ± 0.0924,0.7194 ± 0.4069
+5,UCS,graphseqlm-gpt-UCS,"48 (Survival: 31, Death: 17)",1.1489 ± 1.1229,0.8133 ± 0.1193,0.6671 ± 0.4054

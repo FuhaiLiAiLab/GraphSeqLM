@@ -46,28 +46,36 @@ def extract_model_data(root_dir):
     data = []
     for model_dir in os.listdir(root_dir):
         model_path = os.path.join(root_dir, model_dir)
-        if os.path.isdir(model_path):
-            # Extract model name
-            model_name = model_dir
-            for subdir in os.listdir(model_path):
-                if subdir.startswith('epoch'):
-                    epoch = int(re.search(r"epoch_(\d+)", subdir).group(1))
-                    fold = int(re.search(r"fold_(\d+)", subdir).group(1))
-                    experiment_path = os.path.join(model_path, subdir)
-                    info_file = os.path.join(experiment_path, 'best_model_info.txt')
-                    
-                    if os.path.exists(info_file):
-                        fold, train_loss, train_acc, test_loss, test_acc = parse_model_info(info_file)
-                        data.append({
-                            'Model': model_name,
-                            'Epoch': epoch,
-                            'Fold': fold,
-                            'Train Loss': train_loss,
-                            'Train Accuracy': train_acc,
-                            'Test Loss': test_loss,
-                            'Test Accuracy': test_acc
-                        })
+        if not os.path.isdir(model_path):  # Ensure it's a directory
+            print(f"Skipping non-directory: {model_path}")
+            continue
+        for model_cancer in os.listdir(model_path):
+            model_cancer_dir = os.path.join(model_path, model_cancer)
+            if os.path.isdir(model_cancer_dir):
+                # Extract model name
+                model_name = model_path + '-' + model_cancer
+                model_name = model_name.replace('./', '')
+                for subdir in os.listdir(model_cancer_dir):  # Corrected to iterate over the correct directory
+                    if subdir.startswith('epoch'):
+                        epoch = int(re.search(r"epoch_(\d+)", subdir).group(1))
+                        fold = int(re.search(r"fold_(\d+)", subdir).group(1))
+                        experiment_path = os.path.join(model_cancer_dir, subdir)
+                        info_file = os.path.join(experiment_path, 'best_model_info.txt')
+                        print(experiment_path)
+                        
+                        if os.path.exists(info_file):
+                            fold, train_loss, train_acc, test_loss, test_acc = parse_model_info(info_file)
+                            data.append({
+                                'Model': model_name,
+                                'Epoch': epoch,
+                                'Fold': fold,
+                                'Train Loss': train_loss,
+                                'Train Accuracy': train_acc,
+                                'Test Loss': test_loss,
+                                'Test Accuracy': test_acc
+                            })
     return data
+
 
 
 def summarize_results(df):

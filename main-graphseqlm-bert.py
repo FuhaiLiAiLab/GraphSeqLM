@@ -146,8 +146,13 @@ def train_model(nth, args, device):
     num_type_node = num_node / num_type
     # Read these feature label files
     print('--- LOADING TRAINING FILES ... ---')
-    xTr = np.load(form_data_path + '/xTr' + str(fold_n) + '.npy')
-    yTr = np.load(form_data_path + '/yTr' + str(fold_n) + '.npy')
+    if args.cancer_type == 'all':
+        xTr = np.load(form_data_path + '/xTr' + str(fold_n) + '.npy')
+        yTr = np.load(form_data_path + '/yTr' + str(fold_n) + '.npy')
+    else:
+        form_data_type_path = form_data_path + '/' + args.cancer_type
+        xTr = np.load(form_data_type_path + '/xTr' + str(fold_n) + '.npy')
+        yTr = np.load(form_data_type_path + '/yTr' + str(fold_n) + '.npy')
     seq = np.load(form_data_path + '/seq.npy', allow_pickle=True)
     all_edge_index = torch.from_numpy(np.load(form_data_path + '/edge_index.npy') ).long()
     internal_edge_index = torch.from_numpy(np.load(form_data_path + '/internal_edge_index.npy') ).long()
@@ -184,16 +189,21 @@ def train_model(nth, args, device):
     max_test_acc = 0
     max_test_acc_id = 0
 
-    # Clean result previous epoch_i_pred files
-    folder_name = 'epoch_' + str(epoch_num) + '_fold_' + str(fold_n)
+    # Create a directory to store the results
+    folder_name = f'epoch_{epoch_num}_fold_{fold_n}'
     unit = nth
-    path = './data/' + dataset + '-result/' + args.train_result_path + '/%s-%d' % (folder_name, unit)
-    while os.path.exists('./data/' + dataset + '-result/' + args.train_result_path) == False:
-        os.mkdir('./data/' + dataset + '-result/' + args.train_result_path)
+    # Construct the base path, incorporating cancer_type
+    base_path = f'./data/{dataset}-result/{args.train_result_path}/{args.cancer_type}'
+    path = f'{base_path}/{folder_name}-{unit}'
+    # Ensure the base directory exists
+    os.makedirs(base_path, exist_ok=True)
+    # Handle cases where the specific path already exists
     while os.path.exists(path):
         unit += 1
-        path = './data/' + dataset + '-result/' + args.train_result_path + '/%s-%d' % (folder_name, unit)
-    os.mkdir(path)
+        path = f'{base_path}/{folder_name}-{unit}'
+    # Create the final directory
+    os.makedirs(path, exist_ok=True)
+
 
     for i in range(1, epoch_num + 1):
         print('---------------------------EPOCH: ' + str(i) + ' ---------------------------')
@@ -290,8 +300,13 @@ def test_model(args, model, device, i):
     fold_n = args.fold_n
     dataset = args.train_dataset
     form_data_path = './data/' + dataset + '-graph-data'
-    xTe = np.load(form_data_path + '/xTe' + str(fold_n) + '.npy')
-    yTe = np.load(form_data_path + '/yTe' + str(fold_n) + '.npy')
+    if args.cancer_type == 'all':
+        xTe = np.load(form_data_path + '/xTe' + str(fold_n) + '.npy')
+        yTe = np.load(form_data_path + '/yTe' + str(fold_n) + '.npy')
+    else:
+        form_data_type_path = form_data_path + '/' + args.cancer_type
+        xTe = np.load(form_data_type_path + '/xTe' + str(fold_n) + '.npy')
+        yTe = np.load(form_data_type_path + '/yTe' + str(fold_n) + '.npy')
     all_edge_index = torch.from_numpy(np.load(form_data_path + '/edge_index.npy') ).long()
     internal_edge_index = torch.from_numpy(np.load(form_data_path + '/internal_edge_index.npy') ).long()
     ppi_edge_index = torch.from_numpy(np.load(form_data_path + '/ppi_edge_index.npy') ).long()
@@ -343,7 +358,11 @@ def test_model(args, model, device, i):
     accuracy = accuracy_score(tmp_test_input_df['label'], tmp_test_input_df['prediction'])
     f1 = f1_score(tmp_test_input_df['label'], tmp_test_input_df['prediction'], average='binary')
     conf_matrix = confusion_matrix(tmp_test_input_df['label'], tmp_test_input_df['prediction'])
-    tn, fp, fn, tp = conf_matrix.ravel()
+    # Safeguard for confusion matrix with a single label
+    if conf_matrix.shape == (1, 1):  # Only one label present
+        tn, fp, fn, tp = 0, 0, 0, conf_matrix[0, 0]  # Adjust for single label scenario
+    elif conf_matrix.shape == (2, 2):  # Normal binary confusion matrix
+        tn, fp, fn, tp = conf_matrix.ravel()
     print('EPOCH ' + str(i) + ' TEST ACCURACY: ', accuracy)
     print('EPOCH ' + str(i) + ' TEST F1: ', f1)
     print('EPOCH ' + str(i) + ' TEST CONFUSION MATRIX: ', conf_matrix)
@@ -387,6 +406,8 @@ def arg_parse():
     # Training parameters
     parser.add_argument('--fold_n', dest='fold_n', type=int, default=1, help='Fold number for training. (default: 1)')
     parser.add_argument('--train_dataset', dest='train_dataset', type=str, default='UCSC', help='Dataset for training. (default: UCSC)')
+    parser.add_argument('--cancer_type', dest='cancer_type', type=str, default='UCS', help='Cancer type for training. (default: all)')
+
     parser.add_argument('--num_train_epoch', dest='num_train_epoch', type=int, default=50, help='Number of epochs to train.')
     parser.add_argument('--batch_size', dest='batch_size', type=int, default=32, help='Batch size of training.')
     parser.add_argument('--num_workers', dest = 'num_workers', type = int, default=0, help = 'Number of workers to load data.')
@@ -408,6 +429,13 @@ def arg_parse():
 
     return parser.parse_args()
 
+def cancer_type_dataset_detection(dir_path):
+    cancer_types = []
+    for root, dirs, files in os.walk(dir_path):
+        for dir in dirs:
+            cancer_types.append(dir)
+    return cancer_types
+
 
 if __name__ == "__main__":
     # Set arguments and print
@@ -419,13 +447,28 @@ if __name__ == "__main__":
     torch.cuda.set_device(device)
     print('MAIN DEVICE: ', device)
 
-    # Train
-    k = 5
-    fold_num_train = 10
-    if args.load == 0: 
-        for fold_n in range(1, k + 1):
-            args.fold_n = fold_n
-            for nth in range(1, fold_num_train + 1):
-                train_model(nth, args, device)
-    else: 
-        test_trained_model(args, device)
+    # Train different cancer types
+    for cancer_type in cancer_type_dataset_detection('./data/UCSC-graph-data'):
+        if cancer_type == 'OV':
+            continue
+        args.cancer_type = cancer_type
+        print('CANCER TYPE: ', cancer_type)
+        k = 5
+        fold_num_train = 10
+        if args.load == 0: 
+            for fold_n in range(1, k + 1):
+                args.fold_n = fold_n
+                for nth in range(1, fold_num_train + 1):
+                    train_model(nth, args, device)
+        else: 
+            test_trained_model(args, device)
+
+    # k = 5
+    # fold_num_train = 10
+    # if args.load == 0: 
+    #     for fold_n in range(1, k + 1):
+    #         args.fold_n = fold_n
+    #         for nth in range(1, fold_num_train + 1):
+    #             train_model(nth, args, device)
+    # else: 
+    #     test_trained_model(args, device)
