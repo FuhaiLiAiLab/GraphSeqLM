@@ -192,7 +192,11 @@ def train_model(nth, args, device):
         epoch_acc_list.append(accuracy)
         f1 = f1_score(tmp_training_input_df['label'], tmp_training_input_df['prediction'], average='binary')
         conf_matrix = confusion_matrix(tmp_training_input_df['label'], tmp_training_input_df['prediction'])
-        tn, fp, fn, tp = conf_matrix.ravel()
+        # Safeguard for confusion matrix with a single label
+        if conf_matrix.shape == (1, 1):  # Only one label present
+            tn, fp, fn, tp = 0, 0, 0, conf_matrix[0, 0]  # Adjust for single label scenario
+        elif conf_matrix.shape == (2, 2):  # Normal binary confusion matrix
+            tn, fp, fn, tp = conf_matrix.ravel()
         print('EPOCH ' + str(i) + ' TRAINING ACCURACY: ', accuracy)
         print('EPOCH ' + str(i) + ' TRAINING F1: ', f1)
         print('EPOCH ' + str(i) + ' TRAINING CONFUSION MATRIX: ', conf_matrix)
@@ -296,7 +300,11 @@ def test_model(args, model, device, i):
     accuracy = accuracy_score(tmp_test_input_df['label'], tmp_test_input_df['prediction'])
     f1 = f1_score(tmp_test_input_df['label'], tmp_test_input_df['prediction'], average='binary')
     conf_matrix = confusion_matrix(tmp_test_input_df['label'], tmp_test_input_df['prediction'])
-    tn, fp, fn, tp = conf_matrix.ravel()
+    # Safeguard for confusion matrix with a single label
+    if conf_matrix.shape == (1, 1):  # Only one label present
+        tn, fp, fn, tp = 0, 0, 0, conf_matrix[0, 0]  # Adjust for single label scenario
+    elif conf_matrix.shape == (2, 2):  # Normal binary confusion matrix
+        tn, fp, fn, tp = conf_matrix.ravel()
     print('EPOCH ' + str(i) + ' TEST ACCURACY: ', accuracy)
     print('EPOCH ' + str(i) + ' TEST F1: ', f1)
     print('EPOCH ' + str(i) + ' TEST CONFUSION MATRIX: ', conf_matrix)

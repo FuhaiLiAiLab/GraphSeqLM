@@ -1,2 +1,0 @@
-Model - Cancer Type,Train Loss (avg ± std),Train Accuracy (avg ± std),Test Loss (avg ± std),Test Accuracy (avg ± std)
-BLCA - BLCA,0.5996 ± 0.042,0.6718 ± 0.0444,0.7956 ± 0.271,0.7168 ± 0.0597

@@ -192,7 +192,11 @@ def train_model(nth, args, device):
         epoch_acc_list.append(accuracy)
         f1 = f1_score(tmp_training_input_df['label'], tmp_training_input_df['prediction'], average='binary')
         conf_matrix = confusion_matrix(tmp_training_input_df['label'], tmp_training_input_df['prediction'])
-        tn, fp, fn, tp = conf_matrix.ravel()
+        # Safeguard for confusion matrix with a single label
+        if conf_matrix.shape == (1, 1):  # Only one label present
+            tn, fp, fn, tp = 0, 0, 0, conf_matrix[0, 0]  # Adjust for single label scenario
+        elif conf_matrix.shape == (2, 2):  # Normal binary confusion matrix
+            tn, fp, fn, tp = conf_matrix.ravel()
         print('EPOCH ' + str(i) + ' TRAINING ACCURACY: ', accuracy)
         print('EPOCH ' + str(i) + ' TRAINING F1: ', f1)
         print('EPOCH ' + str(i) + ' TRAINING CONFUSION MATRIX: ', conf_matrix)
@@ -296,7 +300,11 @@ def test_model(args, model, device, i):
     accuracy = accuracy_score(tmp_test_input_df['label'], tmp_test_input_df['prediction'])
     f1 = f1_score(tmp_test_input_df['label'], tmp_test_input_df['prediction'], average='binary')
     conf_matrix = confusion_matrix(tmp_test_input_df['label'], tmp_test_input_df['prediction'])
-    tn, fp, fn, tp = conf_matrix.ravel()
+    # Safeguard for confusion matrix with a single label
+    if conf_matrix.shape == (1, 1):  # Only one label present
+        tn, fp, fn, tp = 0, 0, 0, conf_matrix[0, 0]  # Adjust for single label scenario
+    elif conf_matrix.shape == (2, 2):  # Normal binary confusion matrix
+        tn, fp, fn, tp = conf_matrix.ravel()
     print('EPOCH ' + str(i) + ' TEST ACCURACY: ', accuracy)
     print('EPOCH ' + str(i) + ' TEST F1: ', f1)
     print('EPOCH ' + str(i) + ' TEST CONFUSION MATRIX: ', conf_matrix)
@@ -333,7 +341,7 @@ def arg_parse():
     parser.add_argument('--cancer_type', dest='cancer_type', type=str, default='all', help='Cancer type for training. (default: all)')
 
     parser.add_argument('--num_train_epoch', dest='num_train_epoch', type=int, default=50, help='Number of epochs to train.')
-    parser.add_argument('--batch_size', dest='batch_size', type=int, default=32, help='Batch size of training.')
+    parser.add_argument('--batch_size', dest='batch_size', type=int, default=256, help='Batch size of training.')
     parser.add_argument('--num_workers', dest = 'num_workers', type = int, default=0, help = 'Number of workers to load data.')
     parser.add_argument('--train_lr', dest='train_lr', type=float, default=0.005, help='Learning rate for training. (default: 0.005)')
     parser.add_argument('--weight_decay', dest='weight_decay', type=float, default=1e-6, help='Weight decay for training. (default: 1e-6)')
@@ -378,7 +386,7 @@ if __name__ == "__main__":
         args.cancer_type = cancer_type
         print('CANCER TYPE: ', cancer_type)
         k = 5
-        fold_num_train = 10
+        fold_num_train = 5
         if args.load == 0: 
             for fold_n in range(1, k + 1):
                 args.fold_n = fold_n

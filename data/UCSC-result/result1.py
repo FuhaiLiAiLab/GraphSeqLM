@@ -198,7 +198,7 @@ def summarize_results(df):
         pd.DataFrame: Summarized metrics grouped by model-cancer_type.
     """
     # Step 1: Extract model-cancer_type (e.g., 'graphseqlm-gpt-ACC')
-    df['Model_Cancer'] = df['Model'].apply(lambda x: '-'.join(x.split('-')[:3]))
+    df['Model_Cancer'] = df['Model'].apply(lambda x: '-'.join(x.split('-')[:-2]))
 
     # Step 2: Group by 'Model_Cancer' and calculate summary statistics
     summary = df.groupby('Model_Cancer').agg(

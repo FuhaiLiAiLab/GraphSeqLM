@@ -1,0 +1,10 @@
+
+-------------Fold: 3 -------------
+
+-------------BEST TEST ACCURACY MODEL ID INFO: 50 -------------
+--- TRAIN ---
+BEST MODEL TRAIN LOSS: nan
+BEST MODEL TRAIN ACCURACY: 0.74
+--- TEST ---
+BEST MODEL TEST LOSS: nan
+BEST MODEL TEST ACCURACY: 1.0
