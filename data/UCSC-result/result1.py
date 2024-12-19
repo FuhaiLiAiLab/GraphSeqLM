@@ -117,6 +117,8 @@ def extract_model_data(root_dir):
 
                         if os.path.exists(info_file):
                             fold, train_loss, train_acc, test_loss, test_acc = parse_model_info(info_file)
+                            if train_loss is None or train_acc is None or test_loss is None or test_acc is None:
+                                continue
                             if os.path.exists(train_file):
                                 train_survival_rate, train_death_rate, train_f1, train_recall, train_sensitivity, train_specificity = calculate_metrics(train_file)
                             else:
