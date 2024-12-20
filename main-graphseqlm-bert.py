@@ -179,11 +179,11 @@ def train_model(nth, args, device):
             num_type_node, dna_seq_model, rna_seq_model, protein_seq_model, seq
         )
     
-    # Save the embeddings
-    np.save(dna_embedding_path, dna_embedding.cpu().numpy())
-    np.save(rna_embedding_path, rna_embedding.cpu().numpy())
-    np.save(protein_embedding_path, protein_embedding.cpu().numpy())
-    print("Embeddings generated and saved.")
+        # Save the embeddings
+        np.save(dna_embedding_path, dna_embedding.cpu().numpy())
+        np.save(rna_embedding_path, rna_embedding.cpu().numpy())
+        np.save(protein_embedding_path, protein_embedding.cpu().numpy())
+        print("Embeddings generated and saved.")
 
     # Fetch sequence dimension
     dna_seq_dim = dna_embedding.shape[1]

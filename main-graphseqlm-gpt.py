@@ -83,7 +83,7 @@ def language_model_embedding(num_type_node, dna_gpt_lm, rna_gpt_lm, prot_gpt_lm,
 
 def train_graphclas_model(train_dataset_loader, dna_embedding, rna_embedding, protein_embedding, model, device, args):
     optimizer = torch.optim.Adam(filter(lambda p : p.requires_grad, model.parameters()), lr=args.train_lr, eps=args.eps, weight_decay=args.weight_decay)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=20, factor=0.9)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=10, factor=0.9)
     batch_loss = 0
     for batch_idx, data in enumerate(train_dataset_loader):
         optimizer.zero_grad()
@@ -180,11 +180,11 @@ def train_model(nth, args, device):
             num_type_node, dna_seq_model, rna_seq_model, protein_seq_model, seq
         )
     
-    # Save the embeddings
-    np.save(dna_embedding_path, dna_embedding.cpu().numpy())
-    np.save(rna_embedding_path, rna_embedding.cpu().numpy())
-    np.save(protein_embedding_path, protein_embedding.cpu().numpy())
-    print("Embeddings generated and saved.")
+        # Save the embeddings
+        np.save(dna_embedding_path, dna_embedding.cpu().numpy())
+        np.save(rna_embedding_path, rna_embedding.cpu().numpy())
+        np.save(protein_embedding_path, protein_embedding.cpu().numpy())
+        print("Embeddings generated and saved.")
 
     # Average the sequence emebedding
     dna_embedding = np.mean(dna_embedding, axis=1).reshape(-1, 1)
@@ -435,10 +435,10 @@ def arg_parse():
     # Training parameters
     parser.add_argument('--fold_n', dest='fold_n', type=int, default=1, help='Fold number for training. (default: 1)')
     parser.add_argument('--train_dataset', dest='train_dataset', type=str, default='UCSC', help='Dataset for training. (default: UCSC)')
-    parser.add_argument('--cancer_type', dest='cancer_type', type=str, default='UCS', help='Cancer type for training. (default: all)')
+    parser.add_argument('--cancer_type', dest='cancer_type', type=str, default='STAD', help='Cancer type for training. (default: all)')
 
     parser.add_argument('--num_train_epoch', dest='num_train_epoch', type=int, default=50, help='Number of epochs to train.')
-    parser.add_argument('--batch_size', dest='batch_size', type=int, default=32, help='Batch size of training.')
+    parser.add_argument('--batch_size', dest='batch_size', type=int, default=256, help='Batch size of training.')
     parser.add_argument('--num_workers', dest = 'num_workers', type = int, default=0, help = 'Number of workers to load data.')
     parser.add_argument('--train_lr', dest='train_lr', type=float, default=0.005, help='Learning rate for training. (default: 0.005)')
     parser.add_argument('--weight_decay', dest='weight_decay', type=float, default=1e-5, help='Weight decay for training. (default: 1e-5)')
@@ -477,28 +477,28 @@ if __name__ == "__main__":
     torch.cuda.set_device(device)
     print('MAIN DEVICE: ', device)
 
-    # Train different cancer types
-    for cancer_type in cancer_type_dataset_detection('./data/UCSC-graph-data'):
-        if cancer_type == 'OV':
-            continue
-        args.cancer_type = cancer_type
-        print('CANCER TYPE: ', cancer_type)
-        k = 5
-        fold_num_train = 10
-        if args.load == 0: 
-            for fold_n in range(1, k + 1):
-                args.fold_n = fold_n
-                for nth in range(1, fold_num_train + 1):
-                    train_model(nth, args, device)
-        else: 
-            test_trained_model(args, device)
+    # # Train different cancer types
+    # for cancer_type in cancer_type_dataset_detection('./data/UCSC-graph-data'):
+    #     if cancer_type == 'OV':
+    #         continue
+    #     args.cancer_type = cancer_type
+    #     print('CANCER TYPE: ', cancer_type)
+    #     k = 5
+    #     fold_num_train = 10
+    #     if args.load == 0: 
+    #         for fold_n in range(1, k + 1):
+    #             args.fold_n = fold_n
+    #             for nth in range(1, fold_num_train + 1):
+    #                 train_model(nth, args, device)
+    #     else: 
+    #         test_trained_model(args, device)
 
-    # k = 5
-    # fold_num_train = 10
-    # if args.load == 0: 
-    #     for fold_n in range(1, k + 1):
-    #         args.fold_n = fold_n
-    #         for nth in range(1, fold_num_train + 1):
-    #             train_model(nth, args, device)
-    # else: 
-    #     test_trained_model(args, device)
+    k = 5
+    fold_num_train = 5
+    if args.load == 0: 
+        for fold_n in range(3, 3 + 1):
+            args.fold_n = fold_n
+            for nth in range(1, fold_num_train + 1):
+                train_model(nth, args, device)
+    else: 
+        test_trained_model(args, device)

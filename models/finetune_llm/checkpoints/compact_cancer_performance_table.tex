@@ -1,0 +1,126 @@
+
+\begin{table*}[h!]
+    \centering
+    \caption{Compact Model Performance for Different Cancer Datasets}
+    \label{tab:model_performance_compact}
+    \begin{tabular}{l l l c c c | l l l c c c}
+        \toprule
+        Cancer & Model\_Cancer & \# of Samples & Test Loss & Test Accuracy & Test F1-Score &
+        Cancer & Model\_Cancer & \# of Samples & Test Loss & Test Accuracy & Test F1-Score \\
+        \midrule
+        ACC & graphformer-ACC & 45 (Survival: 13, Death: 32) & $0.6741  \pm  0.0158$ & $0.8667  \pm  0.0497$ & $0.6933  \pm  0.0596$ & ACC & graphseqlm-bert-ACC & 45 (Survival: 13, Death: 32) & $0.6808  \pm  0.0834$ & $0.9333  \pm  0.0609$ & $0.8648  \pm  0.1415$ \\
+        \hline
+        ACC & graphseqlm-gpt-ACC & 45 (Survival: 13, Death: 32) & $0.6582  \pm  0.0424$ & $0.8667  \pm  0.0497$ & $0.6933  \pm  0.0596$ & BLCA & gat-BLCA & 116 (Survival: 60, Death: 56) & $0.6732  \pm  0.0257$ & $0.7761  \pm  0.0552$ & $0.7138  \pm  0.263$ \\
+        \hline
+        BLCA & gcn-BLCA & 116 (Survival: 60, Death: 56) & $0.6853  \pm  0.0042$ & $0.7152  \pm  0.0271$ & $0.6669  \pm  0.2368$ & BLCA & gin-BLCA & 116 (Survival: 60, Death: 56) & $0.6881  \pm  0.0144$ & $0.7156  \pm  0.0379$ & $0.617  \pm  0.3497$ \\
+        \hline
+        BLCA & graphformer-BLCA & 116 (Survival: 60, Death: 56) & $0.8453  \pm  0.4753$ & $0.7583  \pm  0.0737$ & $0.7084  \pm  0.1754$ & BLCA & graphseqlm-bert-BLCA & 116 (Survival: 60, Death: 56) & $0.6905  \pm  0.0922$ & $0.7928  \pm  0.0382$ & $0.795  \pm  0.0751$ \\
+        \hline
+        BLCA & graphseqlm-gpt-BLCA & 116 (Survival: 60, Death: 56) & $0.6866  \pm  0.1117$ & $0.7841  \pm  0.0628$ & $0.7743  \pm  0.106$ & BRCA & gcn-BRCA & 642 (Survival: 86, Death: 556) & $0.8305  \pm  0.2867$ & $0.8678  \pm  0.0325$ & $0.0789  \pm  0.0949$ \\
+        \hline
+        BRCA & gin-BRCA & 642 (Survival: 86, Death: 556) & $0.7849  \pm  0.1727$ & $0.8831  \pm  0.0073$ & $0.1059  \pm  0.1005$ & BRCA & graphformer-BRCA & 642 (Survival: 86, Death: 556) & $0.8313  \pm  0.1724$ & $0.8786  \pm  0.0275$ & $0.1588  \pm  0.1397$ \\
+        \hline
+        BRCA & graphseqlm-bert-BRCA & 642 (Survival: 86, Death: 556) & $0.861  \pm  0.2653$ & $0.8723  \pm  0.0257$ & $0.0833  \pm  0.0866$ & BRCA & graphseqlm-gpt-BRCA & 642 (Survival: 86, Death: 556) & $1.0791  \pm  0.5149$ & $0.8708  \pm  0.0251$ & $0.0627  \pm  0.0591$ \\
+        \hline
+        COAD & graphformer-COAD & 210 (Survival: 46, Death: 164) & $0.8862  \pm  0.3443$ & $0.8143  \pm  0.0722$ & $0.2928  \pm  0.1806$ & COAD & graphseqlm-bert-COAD & 210 (Survival: 46, Death: 164) & $1.0436  \pm  0.5414$ & $0.8095  \pm  0.0558$ & $0.2087  \pm  0.2055$ \\
+        \hline
+        COAD & graphseqlm-gpt-COAD & 210 (Survival: 46, Death: 164) & $0.8241  \pm  0.2231$ & $0.8095  \pm  0.0694$ & $0.3454  \pm  0.199$ & ESCA & graphformer-ESCA & 114 (Survival: 41, Death: 73) & $0.6984  \pm  0.0422$ & $0.7455  \pm  0.0574$ & $0.4745  \pm  0.1739$ \\
+        \hline
+        ESCA & graphseqlm-bert-ESCA & 114 (Survival: 41, Death: 73) & $0.6931  \pm  0.032$ & $0.7281  \pm  0.0361$ & $0.4788  \pm  0.224$ & ESCA & graphseqlm-gpt-ESCA & 114 (Survival: 41, Death: 73) & $0.7329  \pm  0.1166$ & $0.7458  \pm  0.0342$ & $0.5136  \pm  0.1434$ \\
+        \hline
+        GBM & gat-GBM & 67 (Survival: 49, Death: 18) & $0.5571  \pm  0.3109$ & $0.8319  \pm  0.1274$ & $0.8884  \pm  0.0884$ & GBM & gcn-GBM & 67 (Survival: 49, Death: 18) & $0.7835  \pm  0.4756$ & $0.7879  \pm  0.1261$ & $0.8634  \pm  0.0867$ \\
+        \hline
+        GBM & gin-GBM & 67 (Survival: 49, Death: 18) & $1.0619  \pm  0.8397$ & $0.833  \pm  0.1146$ & $0.8839  \pm  0.0861$ & GBM & graphformer-GBM & 67 (Survival: 49, Death: 18) & $0.8879  \pm  0.5747$ & $0.7868  \pm  0.1492$ & $0.8591  \pm  0.0991$ \\
+        \hline
+        GBM & graphseqlm-bert-GBM & 67 (Survival: 49, Death: 18) & $0.7739  \pm  0.4274$ & $0.8022  \pm  0.1407$ & $0.8653  \pm  0.1073$ & GBM & graphseqlm-gpt-GBM & 67 (Survival: 49, Death: 18) & $0.5683  \pm  0.2035$ & $0.8945  \pm  0.0671$ & $0.9145  \pm  0.0618$ \\
+        \hline
+        HNSC & graphformer-HNSC & 188 (Survival: 117, Death: 71) & $0.6347  \pm  0.0596$ & $0.7283  \pm  0.0798$ & $0.7022  \pm  0.21$ & HNSC & graphseqlm-bert-HNSC & 188 (Survival: 117, Death: 71) & $0.6902  \pm  0.0155$ & $0.7232  \pm  0.1044$ & $0.7694  \pm  0.1384$ \\
+        \hline
+        HNSC & graphseqlm-gpt-HNSC & 188 (Survival: 117, Death: 71) & $0.6705  \pm  0.0558$ & $0.7067  \pm  0.0967$ & $0.711  \pm  0.2246$ & KICH & graphformer-KICH & 62 (Survival: 8, Death: 54) & $0.8008  \pm  0.7816$ & $0.9359  \pm  0.036$ & $0.56  \pm  0.3183$ \\
+        \hline
+        KICH & graphseqlm-bert-KICH & 62 (Survival: 8, Death: 54) & $1.3829  \pm  1.504$ & $0.9038  \pm  0.0672$ & $0.2667  \pm  0.3651$ & KICH & graphseqlm-gpt-KICH & 62 (Survival: 8, Death: 54) & $0.9379  \pm  0.8665$ & $0.9218  \pm  0.077$ & $0.3333  \pm  0.4714$ \\
+        \hline
+        KIRC & graphformer-KIRC & 264 (Survival: 75, Death: 189) & $0.8429  \pm  0.1254$ & $0.7766  \pm  0.024$ & $0.4223  \pm  0.1324$ & KIRC & graphseqlm-bert-KIRC & 264 (Survival: 75, Death: 189) & $0.6837  \pm  0.011$ & $0.7539  \pm  0.0215$ & $0.4127  \pm  0.136$ \\
+        \hline
+        KIRC & graphseqlm-gpt-KIRC & 264 (Survival: 75, Death: 189) & $0.9791  \pm  0.4847$ & $0.7657  \pm  0.0233$ & $0.41  \pm  0.1638$ & KIRP & gat-KIRP & 123 (Survival: 17, Death: 106) & $0.6841  \pm  0.0153$ & $0.8971  \pm  0.0549$ & $0.3917  \pm  0.2833$ \\
+        \hline
+        KIRP & gcn-KIRP & 123 (Survival: 17, Death: 106) & $1.3118  \pm  1.1321$ & $0.8847  \pm  0.0913$ & $0.2933  \pm  0.4044$ & KIRP & gin-KIRP & 123 (Survival: 17, Death: 106) & $0.9714  \pm  0.5454$ & $0.8767  \pm  0.0605$ & $0.2964  \pm  0.2161$ \\
+        \hline
+        KIRP & graphformer-KIRP & 123 (Survival: 17, Death: 106) & $0.7974  \pm  0.3648$ & $0.91  \pm  0.0464$ & $0.52  \pm  0.2921$ & KIRP & graphseqlm-bert-KIRP & 123 (Survival: 17, Death: 106) & $0.7662  \pm  0.291$ & $0.8933  \pm  0.0572$ & $0.3667  \pm  0.3416$ \\
+        \hline
+        LGG & gat-LGG & 413 (Survival: 92, Death: 321) & $0.8007  \pm  0.1428$ & $0.8257  \pm  0.0468$ & $0.4252  \pm  0.2162$ & LGG & gcn-LGG & 413 (Survival: 92, Death: 321) & $0.7682  \pm  0.1567$ & $0.8159  \pm  0.0518$ & $0.4583  \pm  0.1212$ \\
+        \hline
+        LGG & gin-LGG & 413 (Survival: 92, Death: 321) & $0.8704  \pm  0.392$ & $0.8208  \pm  0.0578$ & $0.3912  \pm  0.2751$ & LGG & graphformer-LGG & 413 (Survival: 92, Death: 321) & $1.065  \pm  0.3736$ & $0.8256  \pm  0.0527$ & $0.433  \pm  0.2015$ \\
+        \hline
+        LGG & graphseqlm-bert-LGG & 413 (Survival: 92, Death: 321) & $0.7964  \pm  0.1943$ & $0.8208  \pm  0.0408$ & $0.3864  \pm  0.1347$ & LGG & graphseqlm-gpt-LGG & 413 (Survival: 92, Death: 321) & $0.8702  \pm  0.1512$ & $0.8208  \pm  0.0464$ & $0.4475  \pm  0.1292$ \\
+        \hline
+        LIHC & gat-LIHC & 149 (Survival: 73, Death: 76) & $0.6879  \pm  0.0028$ & $0.6917  \pm  0.0401$ & $0.6117  \pm  0.187$ & LIHC & gcn-LIHC & 149 (Survival: 73, Death: 76) & $0.6851  \pm  0.0058$ & $0.7257  \pm  0.0811$ & $0.7265  \pm  0.1222$ \\
+        \hline
+        LIHC & gin-LIHC & 149 (Survival: 73, Death: 76) & $0.6754  \pm  0.0223$ & $0.7053  \pm  0.0616$ & $0.6635  \pm  0.1747$ & LIHC & graphformer-LIHC & 149 (Survival: 73, Death: 76) & $0.68  \pm  0.0726$ & $0.7253  \pm  0.0406$ & $0.6491  \pm  0.1772$ \\
+        \hline
+        LIHC & graphseqlm-bert-LIHC & 149 (Survival: 73, Death: 76) & $0.6882  \pm  0.0138$ & $0.6984  \pm  0.0376$ & $0.5676  \pm  0.2233$ & LIHC & graphseqlm-gpt-LIHC & 149 (Survival: 73, Death: 76) & $0.6736  \pm  0.0388$ & $0.7115  \pm  0.0161$ & $0.6245  \pm  0.1464$ \\
+        \hline
+        LUAD & gat-LUAD & 172 (Survival: 79, Death: 93) & $0.6443  \pm  0.1106$ & $0.6983  \pm  0.0557$ & $0.657  \pm  0.058$ & LUAD & gcn-LUAD & 172 (Survival: 79, Death: 93) & $0.6559  \pm  0.0613$ & $0.6803  \pm  0.0452$ & $0.6618  \pm  0.0727$ \\
+        \hline
+        LUAD & gin-LUAD & 172 (Survival: 79, Death: 93) & $0.67  \pm  0.0149$ & $0.6867  \pm  0.0714$ & $0.677  \pm  0.0335$ & LUAD & graphformer-LUAD & 172 (Survival: 79, Death: 93) & $0.6401  \pm  0.1301$ & $0.6689  \pm  0.0706$ & $0.6162  \pm  0.1238$ \\
+        \hline
+        LUAD & graphseqlm-bert-LUAD & 172 (Survival: 79, Death: 93) & $0.68  \pm  0.0245$ & $0.6571  \pm  0.0458$ & $0.5518  \pm  0.2001$ & LUAD & graphseqlm-gpt-LUAD & 172 (Survival: 79, Death: 93) & $0.6807  \pm  0.1806$ & $0.6629  \pm  0.0663$ & $0.5025  \pm  0.1861$ \\
+        \hline
+        LUSC & gat-LUSC & 103 (Survival: 47, Death: 56) & $0.6774  \pm  0.0359$ & $0.7186  \pm  0.0385$ & $0.5889  \pm  0.2214$ & LUSC & gcn-LUSC & 103 (Survival: 47, Death: 56) & $0.8025  \pm  0.2222$ & $0.6995  \pm  0.0592$ & $0.4734  \pm  0.348$ \\
+        \hline
+        LUSC & gin-LUSC & 103 (Survival: 47, Death: 56) & $0.6943  \pm  0.0201$ & $0.7281  \pm  0.0264$ & $0.6234  \pm  0.2321$ & LUSC & graphformer-LUSC & 103 (Survival: 47, Death: 56) & $0.7264  \pm  0.0681$ & $0.7086  \pm  0.0078$ & $0.4921  \pm  0.2727$ \\
+        \hline
+        LUSC & graphseqlm-bert-LUSC & 103 (Survival: 47, Death: 56) & $0.9782  \pm  0.6191$ & $0.699  \pm  0.0404$ & $0.5583  \pm  0.2387$ & LUSC & graphseqlm-gpt-LUSC & 103 (Survival: 47, Death: 56) & $0.7904  \pm  0.2053$ & $0.7376  \pm  0.0287$ & $0.6245  \pm  0.2203$ \\
+        \hline
+        PCPG & gat-PCPG & 76 (Survival: 2, Death: 74) & $0.6196  \pm  0.1578$ & $0.9733  \pm  0.0365$ & $0.0  \pm  0.0$ & PCPG & gcn-PCPG & 76 (Survival: 2, Death: 74) & $0.5157  \pm  0.2751$ & $0.9733  \pm  0.0365$ & $0.0  \pm  0.0$ \\
+        \hline
+        PCPG & gin-PCPG & 76 (Survival: 2, Death: 74) & $0.4666  \pm  0.2575$ & $0.9733  \pm  0.0365$ & $0.0  \pm  0.0$ & PCPG & graphformer-PCPG & 76 (Survival: 2, Death: 74) & $0.4228  \pm  0.3885$ & $0.9733  \pm  0.0365$ & $0.0  \pm  0.0$ \\
+        \hline
+        PCPG & graphseqlm-bert-PCPG & 76 (Survival: 2, Death: 74) & $0.5251  \pm  0.6747$ & $0.9733  \pm  0.0365$ & $0.0  \pm  0.0$ & PCPG & graphseqlm-gpt-PCPG & 76 (Survival: 2, Death: 74) & $0.5119  \pm  0.5444$ & $0.9733  \pm  0.0365$ & $0.0  \pm  0.0$ \\
+        \hline
+        PRAD & gat-PRAD & 246 (Survival: 4, Death: 242) & $1.0771  \pm  0.3989$ & $0.9838  \pm  0.0091$ & $0.0  \pm  0.0$ & PRAD & gcn-PRAD & 246 (Survival: 4, Death: 242) & $1.6172  \pm  2.0349$ & $0.9838  \pm  0.0091$ & $0.0  \pm  0.0$ \\
+        \hline
+        PRAD & gin-PRAD & 246 (Survival: 4, Death: 242) & $0.5876  \pm  0.0461$ & $0.9847  \pm  0.0102$ & $0.0  \pm  0.0$ & PRAD & graphformer-PRAD & 246 (Survival: 4, Death: 242) & $1.7084  \pm  1.1673$ & $0.9838  \pm  0.0091$ & $0.0  \pm  0.0$ \\
+        \hline
+        PRAD & graphseqlm-bert-PRAD & 246 (Survival: 4, Death: 242) & $1.476  \pm  0.9339$ & $0.9838  \pm  0.0091$ & $0.0  \pm  0.0$ & PRAD & graphseqlm-gpt-PRAD & 246 (Survival: 4, Death: 242) & $1.571  \pm  1.2762$ & $0.9838  \pm  0.0091$ & $0.0  \pm  0.0$ \\
+        \hline
+        READ & gat-READ & 62 (Survival: 13, Death: 49) & $1.0323  \pm  0.7329$ & $0.8385  \pm  0.13$ & $0.2533  \pm  0.3477$ & READ & gcn-READ & 62 (Survival: 13, Death: 49) & $0.8852  \pm  0.8306$ & $0.8385  \pm  0.13$ & $0.2333  \pm  0.3249$ \\
+        \hline
+        READ & gin-READ & 62 (Survival: 13, Death: 49) & $0.6795  \pm  0.107$ & $0.8705  \pm  0.1479$ & $0.51  \pm  0.4749$ & READ & graphformer-READ & 62 (Survival: 13, Death: 49) & $0.7828  \pm  0.7968$ & $0.8872  \pm  0.1063$ & $0.4714  \pm  0.4673$ \\
+        \hline
+        READ & graphseqlm-bert-READ & 62 (Survival: 13, Death: 49) & $0.529  \pm  0.2881$ & $0.9192  \pm  0.0803$ & $0.6267  \pm  0.394$ & SKCM & gat-SKCM & 59 (Survival: 17, Death: 42) & $0.6927  \pm  0.0257$ & $0.7788  \pm  0.0975$ & $0.2943  \pm  0.2755$ \\
+        \hline
+        SKCM & gcn-SKCM & 59 (Survival: 17, Death: 42) & $0.7062  \pm  0.0189$ & $0.7636  \pm  0.1065$ & $0.2  \pm  0.2981$ & SKCM & gin-SKCM & 59 (Survival: 17, Death: 42) & $0.6687  \pm  0.0299$ & $0.8303  \pm  0.0593$ & $0.4633  \pm  0.2931$ \\
+        \hline
+        SKCM & graphformer-SKCM & 59 (Survival: 17, Death: 42) & $0.696  \pm  0.1432$ & $0.8121  \pm  0.0756$ & $0.4433  \pm  0.2934$ & SKCM & graphseqlm-bert-SKCM & 59 (Survival: 17, Death: 42) & $1.267  \pm  1.0788$ & $0.7455  \pm  0.1322$ & $0.2143  \pm  0.2945$ \\
+        \hline
+        SKCM & graphseqlm-gpt-SKCM & 59 (Survival: 17, Death: 42) & $0.7484  \pm  0.3096$ & $0.8621  \pm  0.0836$ & $0.5332  \pm  0.3706$ & STAD & gat-STAD & 309 (Survival: 121, Death: 188) & $0.7213  \pm  0.0495$ & $0.6701  \pm  0.0734$ & $0.3808  \pm  0.2027$ \\
+        \hline
+        STAD & gcn-STAD & 309 (Survival: 121, Death: 188) & $0.7059  \pm  0.0437$ & $0.6605  \pm  0.0835$ & $0.2767  \pm  0.2377$ & STAD & gin-STAD & 309 (Survival: 121, Death: 188) & $0.6883  \pm  0.0068$ & $0.6604  \pm  0.0644$ & $0.4132  \pm  0.2433$ \\
+        \hline
+        STAD & graphformer-STAD & 309 (Survival: 121, Death: 188) & $0.7141  \pm  0.0608$ & $0.6831  \pm  0.0619$ & $0.4034  \pm  0.1576$ & STAD & graphseqlm-bert-STAD & 309 (Survival: 121, Death: 188) & $0.722  \pm  0.0581$ & $0.6538  \pm  0.0624$ & $0.3556  \pm  0.2404$ \\
+        \hline
+        STAD & graphseqlm-gpt-STAD & 309 (Survival: 121, Death: 188) & $0.7249  \pm  0.0943$ & $0.6734  \pm  0.0766$ & $0.3319  \pm  0.1847$ & THCA & gat-THCA & 353 (Survival: 14, Death: 339) & $3.9386  \pm  3.1137$ & $0.9603  \pm  0.0253$ & $0.0  \pm  0.0$ \\
+        \hline
+        THCA & gcn-THCA & 353 (Survival: 14, Death: 339) & $2.3035  \pm  1.3446$ & $0.9603  \pm  0.0253$ & $0.0  \pm  0.0$ & THCA & gin-THCA & 353 (Survival: 14, Death: 339) & $11.6375  \pm  18.0903$ & $0.9432  \pm  0.0138$ & $0.0  \pm  0.0$ \\
+        \hline
+        THCA & graphformer-THCA & 353 (Survival: 14, Death: 339) & $3.323  \pm  1.2213$ & $0.9603  \pm  0.0253$ & $0.0  \pm  0.0$ & THCA & graphseqlm-bert-THCA & 353 (Survival: 14, Death: 339) & $0.7884  \pm  0.0625$ & $0.9631  \pm  0.0257$ & $0.1  \pm  0.2236$ \\
+        \hline
+        THCA & graphseqlm-gpt-THCA & 353 (Survival: 14, Death: 339) & $2.8351  \pm  1.0513$ & $0.9603  \pm  0.0253$ & $0.0  \pm  0.0$ & UCEC & gat-UCEC & 99 (Survival: 20, Death: 79) & $0.7303  \pm  0.1666$ & $0.8379  \pm  0.115$ & $0.38  \pm  0.4147$ \\
+        \hline
+        UCEC & gcn-UCEC & 99 (Survival: 20, Death: 79) & $0.7458  \pm  0.1039$ & $0.8289  \pm  0.1087$ & $0.2533  \pm  0.3477$ & UCEC & gin-UCEC & 99 (Survival: 20, Death: 79) & $0.6968  \pm  0.0346$ & $0.8484  \pm  0.0936$ & $0.4619  \pm  0.2649$ \\
+        \hline
+        UCEC & graphformer-UCEC & 99 (Survival: 20, Death: 79) & $0.6411  \pm  0.0886$ & $0.8589  \pm  0.1079$ & $0.66  \pm  0.0365$ & UCEC & graphseqlm-bert-UCEC & 99 (Survival: 20, Death: 79) & $0.8613  \pm  0.4317$ & $0.8284  \pm  0.1034$ & $0.34  \pm  0.3435$ \\
+        \hline
+        UCEC & graphseqlm-gpt-UCEC & 99 (Survival: 20, Death: 79) & $1.0671  \pm  0.7629$ & $0.8389  \pm  0.1077$ & $0.3467  \pm  0.3347$ & UCS & gat-UCS & 48 (Survival: 31, Death: 17) & $0.6696  \pm  0.2129$ & $0.8956  \pm  0.1059$ & $0.8778  \pm  0.1383$ \\
+        \hline
+        UCS & gcn-UCS & 48 (Survival: 31, Death: 17) & $1.6735  \pm  2.6765$ & $0.8556  \pm  0.0936$ & $0.7311  \pm  0.4132$ & UCS & gin-UCS & 48 (Survival: 31, Death: 17) & $0.6897  \pm  0.0284$ & $0.8333  \pm  0.1247$ & $0.8194  \pm  0.1476$ \\
+        \hline
+        UCS & graphformer-UCS & 48 (Survival: 31, Death: 17) & $1.0532  \pm  0.8192$ & $0.8311  \pm  0.1695$ & $0.8406  \pm  0.1437$ & UCS & graphseqlm-bert-UCS & 48 (Survival: 31, Death: 17) & $0.6082  \pm  0.2941$ & $0.8556  \pm  0.0936$ & $0.8461  \pm  0.1232$ \\
+        \hline
+        UCS & graphseqlm-gpt-UCS & 48 (Survival: 31, Death: 17) & $0.9147  \pm  0.8452$ & $0.8133  \pm  0.1193$ & $0.6671  \pm  0.4054$ &  &  &  & $$ & $$ & $$ \\
+        \hline
+
+        \bottomrule
+    \end{tabular}
+\end{table*}
