@@ -1,7 +1,6 @@
 # pycache
 /__pycache__/*
 **.DS_Store
-**.png
 **.pdf
 **.h5
 **.pyc
