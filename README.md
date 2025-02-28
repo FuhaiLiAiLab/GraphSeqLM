@@ -1,5 +1,4 @@
-# GraphSeqLM
-A Unified Graph Language Framework for Omic Graph Learning
+# GraphSeqLM: A Unified Graph Language Framework for Omic Graph Learning
 
 ![Figure1](./figures/F1.png)
 
