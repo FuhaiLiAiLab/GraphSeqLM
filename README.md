@@ -86,12 +86,11 @@ Key flags (see the script for full options):
 If this repository is useful in your research, please consider citing the following related work:
 
 ```bibtex
-@article{al2025comprehensive,
-  title={A Comprehensive Review of Multimodal Deep Learning for Enhanced Medical Diagnostics.},
-  author={Al-Zoghby, Aya M and Ismail Ebada, Ahmed and Saleh, Aya S and Abdelhay, Mohammed and Awad, Wael A},
-  journal={Computers, Materials \& Continua},
-  volume={84},
-  number={3},
+@inproceedings{zhang2025graphseqlm,
+  title={GraphSeqLM: A Unified Graph Language Framework for Omic Graph Learning},
+  author={Zhang, Heming and Huang, Di and Chen, Yixin and Li, Fuhai},
+  booktitle={Companion Proceedings of the ACM on Web Conference 2025},
+  pages={1510--1513},
   year={2025}
 }
 ```
