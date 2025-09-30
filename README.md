@@ -28,7 +28,6 @@
 - [Environment Setup](#environment-setup)
 - [Data Preprocessing](#data-preprocessing)
 - [Training](#training)
-- [Links](#links)
 - [License](#license)
 
 ---
