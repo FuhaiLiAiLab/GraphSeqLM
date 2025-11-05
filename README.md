@@ -58,6 +58,8 @@ pip install transformers
 
 ## Data Preprocessing
 
+> **Note:** This repository uses([https://git-lfs.com/](https://git-lfs.com/)) for large data files. After cloning, please run `git lfs pull` to download the full data files.
+
 ```bash
 cd data
 python processed_data_gen.py
@@ -68,6 +70,8 @@ This script prepares graph structures and attaches sequence‑derived features u
 ---
 
 ## Training
+
+> **Note:** This framework requires a pre-trained DNAGPT model. Please see the instructions in `models/finetune_llm/checkpoints/README.md` to manually download `dna_gpt0.1b_h.pth` and place it in the checkpoints directory before running.
 
 ```bash
 python main-graphseqlm-gpt.py
