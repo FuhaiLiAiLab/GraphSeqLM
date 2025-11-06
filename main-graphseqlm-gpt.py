@@ -187,9 +187,13 @@ def train_model(nth, args, device):
         print("Embeddings generated and saved.")
 
     # Average the sequence emebedding
-    dna_embedding = np.mean(dna_embedding, axis=1).reshape(-1, 1)
-    rna_embedding = np.mean(rna_embedding, axis=1).reshape(-1, 1)
-    protein_embedding = np.mean(protein_embedding, axis=1).reshape(-1, 1)
+    dna_embedding = torch.tensor(dna_embedding)
+    rna_embedding = torch.tensor(rna_embedding)
+    protein_embedding = torch.tensor(protein_embedding)
+
+    dna_embedding = torch.mean(dna_embedding, dim=1).reshape(-1, 1)
+    rna_embedding = torch.mean(rna_embedding, dim=1).reshape(-1, 1)
+    protein_embedding = torch.mean(protein_embedding, dim=1).reshape(-1, 1)
 
     # Fetch sequence dimension
     dna_seq_dim = dna_embedding.shape[1]
@@ -339,9 +343,13 @@ def test_model(args, model, device, i):
     protein_embedding = np.load(form_data_path + '/protein_gpt_embedding.npy')
 
     # Average the sequence emebedding
-    dna_embedding = np.mean(dna_embedding, axis=1).reshape(-1, 1)
-    rna_embedding = np.mean(rna_embedding, axis=1).reshape(-1, 1)
-    protein_embedding = np.mean(protein_embedding, axis=1).reshape(-1, 1)
+    dna_embedding = torch.tensor(dna_embedding)
+    rna_embedding = torch.tensor(rna_embedding)
+    protein_embedding = torch.tensor(protein_embedding)
+
+    dna_embedding = torch.mean(dna_embedding, dim=1).reshape(-1, 1)
+    rna_embedding = torch.mean(rna_embedding, dim=1).reshape(-1, 1)
+    protein_embedding = torch.mean(protein_embedding, dim=1).reshape(-1, 1)
 
     dl_input_num = xTe.shape[0]
     batch_size = args.batch_size
